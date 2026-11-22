@@ -4,7 +4,7 @@ import {
   LUT_LENGTH, LUT_REGION_MAGIC, normalizeHex, validPalette,
   bounds, rectangle, selectionRectangle, makeRegion, encodeRegion, decodeRegion,
   pasteRegion, gradientPalette, transformPalette, varyPalette,
-} from '../web/plasma-lut-editor.mjs';
+} from './web/plasma-lut-editor.mjs';
 
 const palette = () => Array.from({ length: LUT_LENGTH }, (_, i) =>
   i.toString(16).padStart(6, '0').toUpperCase());
