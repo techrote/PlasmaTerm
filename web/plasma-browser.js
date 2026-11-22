@@ -134,6 +134,10 @@ function normalizeLutValue(value) {
   return /^[0-9A-F]{6}$/.test(normalized) ? normalized : null;
 }
 
+function hexChannels(hex) {
+  return [0, 2, 4].map((offset) => parseInt(hex.slice(offset, offset + 2), 16));
+}
+
 function readableLutForeground(hex) {
   const channels = [0, 2, 4].map((offset) => {
     const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
