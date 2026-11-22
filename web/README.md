@@ -215,7 +215,7 @@ until assigned by a future version.
 
 **Editing:** select UI COLOURWAY, choose an interface swatch, then use the A/B
 colour deck, Fill, Brush, gradients or direct hexadecimal cell editing.
-Hover a swatch to identify its original CSS colour and selector. The interface
+Hover a swatch to identify its original CSS colour and selector. Use **FIND UI SELECTOR / HEX** to dim nonmatching swatches (for instance, search for `.lut`, `window` or an original hex code). The interface
 changes as soon as the edit commits. The Bank selector chooses between ten
 independent profiles. Undo/Redo is independent for each UI colourway and
 plasma LUT bank.
