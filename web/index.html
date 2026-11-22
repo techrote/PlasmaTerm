@@ -466,7 +466,7 @@
     <section class="faux-window controls-window" id="controls-window" aria-label="PlasmaTerm keybed">
       <div class="faux-toolbar">
         <button class="traffic-button traffic-yellow" id="dock-controls" type="button" aria-label="Minimize Keybed" aria-controls="controls-window" title="Minimize Keybed"></button>
-        <div class="toolbar-drag-region" data-drag-handle="controls" aria-hidden="true"></div>
+        <div class="toolbar-drag-region" data-drag-handle="controls" aria-hidden="true"><span class="winamp-title">KEYBED</span></div>
         <button class="integrated-button" id="key-latch-plus" type="button" aria-pressed="false" title="Latch first key multiplier">+</button>
         <button class="integrated-button" id="key-latch-plusplus" type="button" aria-pressed="false" title="Latch second key multiplier">++</button>
         <button class="integrated-button" id="reset-keybed" type="button" title="Reset modified parameters and key multipliers">Reset</button>
@@ -481,7 +481,7 @@
       <div class="faux-toolbar plasma-toolbar">
         <button class="traffic-button traffic-red" id="global-reset" type="button" aria-label="Reset window layout and display scaling" title="Reset layout"></button>
         <button class="traffic-button traffic-green" id="visual-mode" type="button" aria-label="Toggle full-viewport visualization" aria-pressed="false" title="Toggle full viewport"></button>
-        <div class="toolbar-drag-region" data-drag-handle="plasma" aria-hidden="true"></div>
+        <div class="toolbar-drag-region" data-drag-handle="plasma" aria-hidden="true"><span class="winamp-title">PLASMATERM</span></div>
         <button class="integrated-button restore-button" id="restore-controls" type="button" aria-controls="controls-window" aria-expanded="true" hidden>Keybed</button>
         <button class="integrated-button restore-button" id="restore-energy" type="button" aria-controls="energy-panel" aria-expanded="true" hidden>Modulation</button>
         <button class="integrated-button restore-button" id="restore-lut" type="button" aria-controls="lut-window" aria-expanded="false">LUT</button>
@@ -523,7 +523,7 @@
     <section class="faux-window energy-window" id="energy-panel" aria-label="Energy modulation">
       <div class="faux-toolbar">
         <button class="traffic-button traffic-yellow" id="dock-energy" type="button" aria-label="Minimize Modulation" aria-controls="energy-panel" title="Minimize Modulation"></button>
-        <div class="toolbar-drag-region" data-drag-handle="energy" aria-hidden="true"></div>
+        <div class="toolbar-drag-region" data-drag-handle="energy" aria-hidden="true"><span class="winamp-title">MODULATION</span></div>
         <button class="integrated-button" id="reset-energy" type="button" title="Reset Energy modulation settings">Reset</button>
       </div>
       <div class="energy-body">
@@ -576,19 +576,109 @@
       </div>
     </section>
 
-    <section class="faux-window lut-window" id="lut-window" aria-label="LUT editor" hidden>
-      <div class="faux-toolbar">
-        <button class="traffic-button traffic-yellow" id="dock-lut" type="button" aria-label="Minimize LUT editor" aria-controls="lut-window" title="Minimize LUT"></button>
-        <button class="integrated-button lut-random-button" id="randomise-lut" type="button" title="Randomise the current LUT using the selected scale" disabled>Randomise</button>
-        <label class="lut-scale-control" for="lut-random-scale">
-          <span>Scale</span>
-          <input class="title-number" id="lut-random-scale" type="number" min="0" max="100" step="1" value="25" inputmode="numeric" aria-label="LUT randomise scale percent">
-          <input id="lut-random-scale-slider" type="range" min="0" max="100" step="1" value="25" aria-label="LUT randomise scale percent slider">
-        </label>
-        <div class="toolbar-drag-region" data-drag-handle="lut" aria-hidden="true"></div>
-        <button class="integrated-button" id="export-lut" type="button" title="Copy LUT values to the clipboard" disabled>Export</button>
+    <section class="faux-window lut-window" id="lut-window" aria-label="Spatial LUT editor" hidden>
+      <div class="faux-toolbar lut-toolbar">
+        <button class="traffic-button traffic-yellow" id="dock-lut" type="button" aria-label="Minimize LUT editor" aria-controls="lut-window" title="Minimize LUT editor"></button>
+        <div class="toolbar-drag-region" data-drag-handle="lut" aria-hidden="true"><span class="winamp-title">LUT EDITOR</span></div>
+        <div class="lut-primary-tools" role="toolbar" aria-label="Spatial LUT tools">
+          <button id="lut-select" type="button" aria-pressed="true" title="Select cells (S)">SELECT</button>
+          <button id="lut-brush" type="button" aria-pressed="false" title="Paint cells (B)">BRUSH</button>
+          <button id="lut-pick" type="button" aria-pressed="false" title="Eyedropper (I)">PICK</button>
+          <span class="lut-tool-separator"></span>
+          <button id="lut-undo" type="button" title="Undo LUT edit (Ctrl+Z)" disabled>UNDO</button>
+          <button id="lut-redo" type="button" title="Redo LUT edit (Ctrl+Y)" disabled>REDO</button>
+        </div>
       </div>
-      <div class="lut-grid" id="lut-grid" role="grid" aria-label="Editable 256-colour LUT"></div>
+      <div class="lut-command-strip" role="toolbar" aria-label="LUT selection and clipboard commands">
+        <span class="lut-command-label">EDIT</span>
+        <button id="lut-all" type="button" title="Select all (Ctrl+A)">ALL</button>
+        <button id="lut-none" type="button">NONE</button>
+        <button id="lut-invert" type="button">INVERT</button>
+        <button id="lut-row" type="button">ROW</button>
+        <button id="lut-column" type="button">COL</button>
+        <span class="lut-tool-separator"></span>
+        <button id="lut-copy" type="button" title="Copy region with shape and mask">COPY</button>
+        <button id="lut-cut" type="button" data-lut-write title="Cut selection to clipboard">CUT</button>
+        <button id="lut-paste" type="button" data-lut-write title="Paste region at selection or cursor">PASTE</button>
+        <button id="lut-clear" type="button" data-lut-write title="Clear selected cells">CLEAR</button>
+      </div>
+      <div class="lut-main-body">
+        <section class="lut-grid-pane" aria-label="LUT colour map">
+          <header class="lut-strip-heading">
+            <span>PALETTE / 256 CELLS</span>
+            <span id="lut-active-slot">LOADING</span>
+          </header>
+          <canvas id="lut-strip" width="512" height="16" aria-label="LUT palette gradient preview"></canvas>
+          <div class="lut-grid-wrap">
+            <div id="lut-grid" class="lut-grid" role="grid" tabindex="0" aria-label="16 by 16 spatial LUT colour editor"></div>
+          </div>
+          <footer class="lut-grid-footer">
+            <span id="lut-selection-status" role="status" aria-live="polite">NO SELECTION</span>
+          </footer>
+        </section>
+        <aside class="lut-ops-pane" aria-label="LUT painting and generation controls">
+          <section class="lut-toolbox">
+            <h3>COLOUR DECK</h3>
+            <div class="lut-color-row">
+              <span id="lut-swatch-a" class="lut-swatch" aria-hidden="true"></span>
+              <label>A <input id="lut-color-a" type="color" value="#ED57AE" aria-label="Primary brush colour A"></label>
+              <input id="lut-hex-a" type="text" maxlength="7" value="ED57AE" autocomplete="off" spellcheck="false" aria-label="Colour A hexadecimal">
+            </div>
+            <div class="lut-color-row">
+              <span id="lut-swatch-b" class="lut-swatch" aria-hidden="true"></span>
+              <label>B <input id="lut-color-b" type="color" value="#32A68F" aria-label="Secondary brush colour B"></label>
+              <input id="lut-hex-b" type="text" maxlength="7" value="32A68F" autocomplete="off" spellcheck="false" aria-label="Colour B hexadecimal">
+            </div>
+            <button id="lut-swap" type="button">SWAP A / B</button>
+          </section>
+          <section class="lut-toolbox">
+            <h3>PAINT / TRANSFORM</h3>
+            <label>BRUSH SHAPE
+              <select id="lut-brush-shape" aria-label="Brush shape">
+                <option value="pixel">PIXEL</option><option value="round" selected>ROUND</option>
+                <option value="square">SQUARE</option><option value="diamond">DIAMOND</option>
+                <option value="irregular">IRREGULAR</option>
+              </select>
+            </label>
+            <label>SIZE <input id="lut-brush-size" type="number" min="1" max="5" step="1" value="2" aria-label="Brush radius 1 to 5"></label>
+            <label>GRADIENT
+              <select id="lut-gradient-mode" aria-label="Gradient direction">
+                <option value="horizontal">HORIZONTAL</option><option value="vertical">VERTICAL</option>
+                <option value="diagonal">DIAGONAL</option><option value="radial">RADIAL</option>
+              </select>
+            </label>
+            <div class="lut-button-grid">
+              <button id="lut-fill" type="button" data-lut-write>FILL A</button>
+              <button id="lut-gradient" type="button" data-lut-write>GRADIENT</button>
+              <button id="lut-flip-h" type="button" data-lut-write>FLIP H</button>
+              <button id="lut-flip-v" type="button" data-lut-write>FLIP V</button>
+              <button id="lut-rotate" type="button" data-lut-write>ROT 180</button>
+            </div>
+          </section>
+          <section class="lut-toolbox">
+            <h3>PALETTE GENERATOR</h3>
+            <label class="lut-scale-label" for="lut-random-scale">VARIATION <span>0–100%</span></label>
+            <div class="lut-scale-row">
+              <input id="lut-random-scale" type="number" min="0" max="100" step="1" value="25" inputmode="numeric" aria-label="Randomise strength percent">
+              <input id="lut-random-scale-slider" type="range" min="0" max="100" step="1" value="25" aria-label="Randomise strength slider">
+            </div>
+            <button id="randomise-lut" type="button" data-lut-write disabled>RANDOMISE 8 ANCHORS</button>
+          </section>
+          <section class="lut-toolbox">
+            <h3>PALETTE I/O</h3>
+            <div class="lut-button-grid">
+              <button id="export-lut" type="button" title="Copy complete LUT as 32 lines of 8 RRGGBB values">EXPORT</button>
+              <button id="lut-save" type="button" title="Download complete LUT as plain text">SAVE TXT</button>
+              <button id="lut-import" type="button" data-lut-write title="Import exactly 256 valid colours">IMPORT</button>
+            </div>
+          </section>
+          <p class="lut-help">DRAG SELECT · SHIFT ADD · CTRL TOGGLE · ALT SUBTRACT<br>
+            LEFT / RIGHT BRUSH = A / B · PICK = A / B<br>
+            DOUBLE-CLICK CELL TO EDIT HEX · CTRL+C/X/V/Z/Y
+          </p>
+        </aside>
+      </div>
+      <input id="lut-file" type="file" accept=".txt,.lut,.json" hidden>
     </section>
   </main>
   <script>
