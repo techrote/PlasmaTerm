@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
+const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || 'chrome', headless: true, args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 const errors = [];
 page.on('pageerror', (error) => errors.push(error.message));
@@ -54,9 +54,9 @@ try {
   await page.locator('#lut-grid .lut-field').nth(35).click();
   assert.match(await page.locator('#lut-hex-a').inputValue(), /^[0-9A-F]{6}$/);
 
-  // Bank switching must use existing worker protocol; "0" always exists.
-  await page.locator('#lut-bank').selectOption('0');
-  await page.waitForFunction(() => document.querySelector('#lut-window')?.dataset.lutSlot === '0', null, { timeout: 10000 });
+  // Bank switching must use the existing worker protocol (1 is a stored LUT).
+  await page.locator('#lut-bank').selectOption('1');
+  await page.waitForFunction(() => document.querySelector('#lut-window')?.dataset.lutSlot === '1', null, { timeout: 10000 });
   assert.ok(!errors.length, 'page errors: ' + errors.join('\n'));
 
   await mkdir('artifacts', { recursive: true });
