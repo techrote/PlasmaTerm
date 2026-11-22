@@ -1,0 +1,36 @@
+name: PlasmaTerm Web LUT and Presentation
+
+on:
+  push:
+    branches:
+      - feat/web-lut-spatial-winamp-modern
+  pull_request:
+    branches:
+      - web-v0.1a
+
+permissions:
+  contents: read
+
+jobs:
+  web-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check JavaScript syntax
+        run: |
+          node --check web/plasma-browser.js
+          node --check web/plasma-worker.js
+          node --check web/plasma-lut-editor.mjs
+      - name: Spatial LUT unit tests
+        run: node --test test_plasma_lut_editor.mjs
+      - name: Existing browser/runtime contract tests
+        run: python -m unittest -v test_plasma_web.py
+      - name: Native config generator regression tests
+        run: python -m unittest -v test_plasma_config_gen.py
