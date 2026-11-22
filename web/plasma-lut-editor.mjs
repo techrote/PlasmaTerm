@@ -590,7 +590,8 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot, colour
     }
     if (tool === 'brush') {
       stroke = { draft: [...state.colors], indices: new Set(),
-        color: colors[event.button === 2 ? 'b' : 'a'], seed: ++strokeSeed };
+        color: colors[event.button === 2 ? 'b' : 'a'], seed: ++strokeSeed,
+        last: index };
       applyStroke(index);
     } else {
       const mode = event.altKey ? 'subtract' :
@@ -604,8 +605,18 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot, colour
     if (!drag && !stroke) return;
     const index = cellAt(event);
     if (index === null) return;
-    if (stroke) applyStroke(index);
-    else if (index !== drag.last) {
+    if (stroke) {
+      // Events are not delivered once per grid cell during fast movement:
+      // interpolate through the skipped cells so a stroke stays connected.
+      const [ax, ay] = xy(stroke.last), [bx, by] = xy(index);
+      const steps = Math.max(Math.abs(bx - ax), Math.abs(by - ay));
+      for (let step = 1; step <= steps; step += 1) {
+        const x = Math.round(ax + (bx - ax) * step / steps);
+        const y = Math.round(ay + (by - ay) * step / steps);
+        applyStroke(at(x, y));
+      }
+      stroke.last = index;
+    } else if (index !== drag.last) {
       drag.last = index;
       selectBox(drag.anchor, index, drag.mode, drag.base);
     }
