@@ -68,6 +68,9 @@ try {
 
   // The LUT window also edits a separate persistent UI skin. These writes
   // must re-colour CSS, not submit another setLut to the renderer.
+  await page.waitForFunction(() => document.querySelector('#terminal')?.dataset.lutSlot === '1' &&
+    document.querySelector('#terminal')?.dataset.lutRevision !== undefined,
+  null, { timeout: 10000 });
   const rendererRevision = await page.locator('#terminal').getAttribute('data-lut-revision');
   await page.locator('#lut-target').selectOption('ui');
   assert.equal(await page.locator('#lut-window').getAttribute('data-lut-mode'), 'ui');
