@@ -607,6 +607,29 @@
       padding: 5px;
       background: #161b14;
     }
+    .lut-bank-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: auto;
+      color: #bbdf75;
+      font: bold 8px Tahoma, Verdana, sans-serif;
+    }
+    #lut-bank {
+      width: 94px;
+      height: 19px;
+      padding: 0 3px;
+      border: 1px solid #637e41;
+      border-radius: 0;
+      color: #dcff8a;
+      background: #101a0f;
+      font: bold 9px Tahoma, Verdana, sans-serif;
+    }
+    #lut-bank:disabled { opacity: .5; }
+    @media (max-width: 470px) {
+      #lut-bank { width: 70px; font-size: 8px; }
+      .lut-bank-label { gap: 2px; }
+    }
     .lut-grid-pane {
       min-width: 0;
       min-height: 0;
@@ -1008,6 +1031,16 @@
         <section class="lut-grid-pane" aria-label="LUT colour map">
           <header class="lut-strip-heading">
             <span>PALETTE / 256 CELLS</span>
+            <label class="lut-bank-label">BANK
+              <select id="lut-bank" aria-label="Active LUT bank" disabled>
+                <option value="none">PROCEDURAL</option>
+                <option value="0">00</option><option value="1">01</option>
+                <option value="2">02</option><option value="3">03</option>
+                <option value="4">04</option><option value="5">05</option>
+                <option value="6">06</option><option value="7">07</option>
+                <option value="8">08</option><option value="9">09</option>
+              </select>
+            </label>
             <span id="lut-active-slot">LOADING</span>
           </header>
           <canvas id="lut-strip" width="512" height="16" aria-label="LUT palette gradient preview"></canvas>
