@@ -1,3 +1,5 @@
+import { installLutEditor } from './plasma-lut-editor.mjs';
+
 const CONFIG_STORAGE_KEY = 'plasmaterm.web-v0.2b.config';
 const LEGACY_CONFIG_STORAGE_KEYS = [
   'plasmaterm.web-v0.101a.config',
@@ -45,11 +47,6 @@ const visualModeButton = document.querySelector('#visual-mode');
 const keyRows = [document.querySelector('#key-row-top'), document.querySelector('#key-row-home')];
 const energyPanel = document.querySelector('#energy-panel');
 const lutWindow = document.querySelector('#lut-window');
-const lutGrid = document.querySelector('#lut-grid');
-const exportLutButton = document.querySelector('#export-lut');
-const randomiseLutButton = document.querySelector('#randomise-lut');
-const lutRandomScaleInput = document.querySelector('#lut-random-scale');
-const lutRandomScaleSlider = document.querySelector('#lut-random-scale-slider');
 const keyLatchPlus = document.querySelector('#key-latch-plus');
 const keyLatchPlusPlus = document.querySelector('#key-latch-plusplus');
 const resetKeybedButton = document.querySelector('#reset-keybed');
@@ -130,8 +127,6 @@ let lutState = {
   slot: 'none',
   revision: 0,
 };
-const lutFields = [];
-let lutRandomScale = 25;
 let backgroundColor = '050509';
 
 function normalizeLutValue(value) {
@@ -144,72 +139,8 @@ function readableLutForeground(hex) {
     const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
     return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
   });
-  const luminance = channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
-  return luminance > 0.46 ? '#08070c' : '#fff';
-}
-
-function hexChannels(hex) {
-  return [0, 2, 4].map((offset) => parseInt(hex.slice(offset, offset + 2), 16));
-}
-
-function formatHexChannels(channels) {
-  return channels.map((value) => Math.max(0, Math.min(255, Math.round(value)))
-    .toString(16).padStart(2, '0')).join('').toUpperCase();
-}
-
-function randomiseLutColors(colors, scalePercent, random = Math.random) {
-  const scale = Math.max(0, Math.min(100, Number(scalePercent) || 0)) / 100;
-  if (scale === 0) return [...colors];
-  const anchorCount = 8;
-  const anchors = Array.from({ length: anchorCount }, () => [0, 0, 0].map(
-    () => Math.min(255, Math.floor(random() * 256))));
-  return colors.map((color, index) => {
-    const position = index * anchorCount / colors.length;
-    const anchorIndex = Math.floor(position) % anchorCount;
-    const nextIndex = (anchorIndex + 1) % anchorCount;
-    const fraction = position - Math.floor(position);
-    const blend = (1 - Math.cos(Math.PI * fraction)) / 2;
-    const target = anchors[anchorIndex].map((channel, channelIndex) => (
-      channel + (anchors[nextIndex][channelIndex] - channel) * blend));
-    const current = hexChannels(normalizeLutValue(color) ?? '000000');
-    return formatHexChannels(current.map((channel, channelIndex) => (
-      channel + (target[channelIndex] - channel) * scale)));
-  });
-}
-
-function paintLutField(field, color) {
-  field.style.backgroundColor = `#${color}`;
-  field.style.color = readableLutForeground(color);
-  field.classList.remove('is-invalid');
-}
-
-function updateLutFields(state = lutState, preserveFocused = true) {
-  if (!Array.isArray(state.colors) || state.colors.length !== 256) return;
-  lutState = {
-    colors: state.colors.map((color) => normalizeLutValue(color) ?? '000000'),
-    slot: String(state.slot ?? 'none'),
-    revision: Number(state.revision) || 0,
-  };
-  for (let index = 0; index < lutFields.length; index += 1) {
-    const field = lutFields[index];
-    const color = lutState.colors[index];
-    if (!preserveFocused || document.activeElement !== field) field.value = color;
-    paintLutField(field, color);
-  }
-  lutWindow.dataset.lutSlot = lutState.slot;
-  lutWindow.dataset.lutRevision = String(lutState.revision);
-  exportLutButton.disabled = false;
-  randomiseLutButton.disabled = false;
-}
-
-function parseBulkLut(text) {
-  const stripped = String(text)
-    .replace(/[\[\]{}()"']/g, ' ')
-    .trim();
-  const tokens = stripped.split(/[\s,;]+/).filter(Boolean);
-  if (tokens.length !== 256) return null;
-  const colors = tokens.map(normalizeLutValue);
-  return colors.every(Boolean) ? colors : null;
+  return channels[0] * 0.2126 + channels[1] * 0.7152 +
+    channels[2] * 0.0722 > 0.46 ? '#08070c' : '#fff';
 }
 
 function sendLutColors(colors) {
@@ -218,137 +149,27 @@ function sendLutColors(colors) {
   return true;
 }
 
-function commitLutField(index) {
-  const field = lutFields[index];
-  const color = normalizeLutValue(field.value);
-  if (!color) {
-    field.value = lutState.colors[index];
-    paintLutField(field, lutState.colors[index]);
-    return false;
-  }
-  if (color === lutState.colors[index]) {
-    field.value = color;
-    paintLutField(field, color);
-    return true;
-  }
-  const colors = [...lutState.colors];
-  colors[index] = color;
-  field.value = color;
-  paintLutField(field, color);
-  if (!sendLutColors(colors)) {
-    field.value = lutState.colors[index];
-    paintLutField(field, lutState.colors[index]);
-    return false;
-  }
-  lutState = { ...lutState, colors };
-  return true;
-}
-
-for (let index = 0; index < 256; index += 1) {
-  const field = document.createElement('input');
-  field.type = 'text';
-  field.className = 'lut-field';
-  field.maxLength = 7;
-  field.value = lutState.colors[index];
-  field.autocomplete = 'off';
-  field.spellcheck = false;
-  field.inputMode = 'text';
-  field.setAttribute('aria-label', `LUT colour ${index}`);
-  field.addEventListener('input', () => {
-    const color = normalizeLutValue(field.value);
-    field.classList.toggle('is-invalid', !color);
-    if (color) paintLutField(field, color);
-  });
-  field.addEventListener('change', () => commitLutField(index));
-  field.addEventListener('blur', () => commitLutField(index));
-  field.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    if (commitLutField(index)) lutFields[(index + 1) % lutFields.length].focus();
-  });
-  if (index === 0) {
-    field.addEventListener('paste', (event) => {
-      const text = event.clipboardData?.getData('text') ?? '';
-      const looksBulk = /[\s,;\[\]]/.test(text.trim());
-      if (!looksBulk) return;
-      event.preventDefault();
-      const colors = parseBulkLut(text);
-      if (!colors) {
-        statusElement.hidden = false;
-        statusElement.classList.add('error');
-        statusElement.textContent = 'LUT paste needs exactly 256 valid RRGGBB values.';
-        return;
-      }
-      if (!sendLutColors(colors)) {
-        statusElement.hidden = false;
-        statusElement.classList.add('error');
-        statusElement.textContent = 'LUT editing is available after PlasmaTerm finishes loading.';
-        return;
-      }
-      updateLutFields({ ...lutState, colors }, false);
-    });
-  }
-  paintLutField(field, lutState.colors[index]);
-  lutGrid.append(field);
-  lutFields.push(field);
-}
-
-exportLutButton.addEventListener('click', async () => {
-  const rows = [];
-  for (let index = 0; index < lutState.colors.length; index += 8) {
-    rows.push(lutState.colors.slice(index, index + 8).join(', '));
-  }
-  try {
-    await navigator.clipboard.writeText(rows.join('\n'));
-    exportLutButton.dataset.copied = 'true';
-    setTimeout(() => { delete exportLutButton.dataset.copied; }, 1200);
-  } catch (error) {
+// The spatial editor owns selection/history/painting; the worker still owns
+// active LUT materialisation, revisions, presets, and persisted config.
+const lutEditor = installLutEditor({
+  root: lutWindow,
+  onCommit: sendLutColors,
+  onError: (message) => {
     statusElement.hidden = false;
     statusElement.classList.add('error');
-    statusElement.textContent = `Could not copy the LUT: ${error.message}`;
-  }
+    statusElement.textContent = String(message);
+  },
 });
 
-function setLutRandomScale(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    lutRandomScaleInput.value = String(lutRandomScale);
-    return false;
-  }
-  lutRandomScale = Math.max(0, Math.min(100, Math.round(numeric)));
-  lutRandomScaleInput.value = String(lutRandomScale);
-  lutRandomScaleSlider.value = String(lutRandomScale);
-  lutWindow.dataset.randomScale = String(lutRandomScale);
-  return true;
+function updateLutFields(state = lutState) {
+  if (!Array.isArray(state.colors) || state.colors.length !== 256) return;
+  lutState = {
+    colors: state.colors.map((color) => normalizeLutValue(color) ?? '000000'),
+    slot: String(state.slot ?? 'none'),
+    revision: Number(state.revision) || 0,
+  };
+  lutEditor.sync(lutState);
 }
-
-const commitLutRandomScale = () => {
-  if (lutRandomScaleInput.value === '') {
-    lutRandomScaleInput.value = String(lutRandomScale);
-    return;
-  }
-  setLutRandomScale(lutRandomScaleInput.value);
-};
-lutRandomScaleInput.addEventListener('change', commitLutRandomScale);
-lutRandomScaleInput.addEventListener('blur', commitLutRandomScale);
-lutRandomScaleInput.addEventListener('keydown', (event) => {
-  if (event.key !== 'Enter') return;
-  event.preventDefault();
-  commitLutRandomScale();
-  lutRandomScaleInput.blur();
-});
-lutRandomScaleSlider.addEventListener('input', () => {
-  setLutRandomScale(lutRandomScaleSlider.value);
-});
-randomiseLutButton.addEventListener('click', () => {
-  if (!runtimeReady || randomiseLutButton.disabled) return;
-  const colors = randomiseLutColors(lutState.colors, lutRandomScale);
-  if (!sendLutColors(colors)) return;
-  updateLutFields({ ...lutState, colors }, false);
-  lutWindow.dataset.randomiseCount = String(
-    Number(lutWindow.dataset.randomiseCount ?? 0) + 1);
-});
-setLutRandomScale(lutRandomScale);
 
 let displayWasStored = false;
 function loadDisplay() {
@@ -1195,7 +1016,7 @@ function resetWorkspaceLayout() {
 globalResetButton.addEventListener('click', resetWorkspaceLayout);
 visualModeButton.addEventListener('click', toggleVisualMode);
 window.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape') return;
+  if (event.key !== 'Escape' || lutWindow.contains(event.target)) return;
   event.preventDefault();
   resetWorkspaceLayout();
 }, { capture: true });
@@ -1275,6 +1096,7 @@ worker.addEventListener('message', ({ data }) => {
     receiveFrame(data.frame);
   } else if (data.type === 'ready') {
     runtimeReady = true;
+    lutEditor.setReady(true);
     sendEnergyConfig();
     worker.postMessage({ type: 'keybedLatches', mask: keybedLatchMask });
   } else if (data.type === 'status') {
@@ -1485,7 +1307,7 @@ window.addEventListener('keydown', (event) => {
   const key = canonicalKey(event);
   terminalElement.dataset.lastKey = key;
   terminalElement.dataset.keyboardOwned = String(ownsKeyboard);
-  if (editingControlActive(event.target)) return;
+  if (editingControlActive(event.target) || lutWindow.contains(event.target)) return;
   if (!ownsKeyboard || !COMMAND_KEYS.has(key)) return;
   if (suppressedUntilRelease.has(key)) {
     if (isConsumedCommand(event, key)) event.preventDefault();
@@ -1498,7 +1320,7 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('keyup', (event) => {
   const key = canonicalKey(event);
   suppressedUntilRelease.delete(key);
-  if (editingControlActive(event.target)) return;
+  if (editingControlActive(event.target) || lutWindow.contains(event.target)) return;
   if (!COMMAND_KEYS.has(key)) return;
   sendKeyUp(key, modifiersFrom(event), 'keyboard');
 }, { capture: true });
