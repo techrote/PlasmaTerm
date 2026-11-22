@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - web-v0.1a
+      - feat/web-lut-spatial-winamp-modern
 
 permissions:
   contents: read
@@ -25,8 +26,9 @@ jobs:
           node --check web/plasma-browser.js
           node --check web/plasma-worker.js
           node --check web/plasma-lut-editor.mjs
+          node --check web/plasma-colourway.mjs
       - name: Spatial LUT unit tests
-        run: node --test test_plasma_lut_editor.mjs
+        run: node --test test_plasma_lut_editor.mjs test_plasma_colourway.mjs
       - name: Existing browser/runtime contract tests
         run: python -m unittest -v test_plasma_web.py
       - name: Native config generator regression tests

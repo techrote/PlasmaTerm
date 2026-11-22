@@ -848,6 +848,42 @@
       background: #0d140b;
       font: 8px/1.55 Tahoma, Verdana, sans-serif;
     }
+    .lut-target-label {
+      display: flex; align-items: center; flex: 0 0 auto;
+      gap: 5px; color: #d0eb8b;
+      font: bold 9px Tahoma, Verdana, sans-serif;
+    }
+    #lut-target {
+      width: 119px; max-width: 25vw; height: 22px;
+      border: 1px solid #698541; border-radius: 1px;
+      background: #14210e; color: #e7ffae;
+      font: bold 9px Tahoma, Verdana, sans-serif;
+    }
+    .lut-window[data-lut-mode="ui"] .lut-cell.is-ui-reserved {
+      opacity: .52;
+      box-shadow: inset 0 0 0 2px #52633a;
+    }
+    .lut-window[data-lut-mode="ui"] .lut-cell.is-ui-filtered { opacity: .16; }
+    #lut-colourway-search-label { display: flex; flex-direction: column; align-items: stretch; gap: 5px; }
+    #lut-colourway-search {
+      width: 100%; height: 24px; padding: 3px 6px;
+      border: 1px solid #698541; border-radius: 1px;
+      background: #10190e; color: #e7ffae;
+      font: bold 10px Consolas, monospace;
+    }
+    #lut-colourway-search-label[hidden] { display: none !important; }
+    #lut-colourway-info {
+      padding: 3px; color: #d0ed8b;
+      font: bold 9px Tahoma, Verdana, sans-serif;
+      letter-spacing: .06em;
+    }
+    #lut-reset-skin {
+      grid-column: 1 / -1;
+      border-color: #c4ef65;
+      color: #eeffcb;
+    }
+    #lut-reset-skin[hidden], #lut-colourway-info[hidden] { display: none !important; }
+
     @media (max-width: 720px) {
       .lut-window {
         width: calc(100vw - 8px);
@@ -1015,6 +1051,13 @@
         </div>
       </div>
       <div class="lut-command-strip" role="toolbar" aria-label="LUT selection and clipboard commands">
+        <label class="lut-target-label">TARGET
+          <select id="lut-target" aria-label="Palette editing target">
+            <option value="plasma" selected>PLASMA LUT</option>
+            <option value="ui">UI COLOURWAY</option>
+          </select>
+        </label>
+        <span class="lut-tool-separator"></span>
         <span class="lut-command-label">EDIT</span>
         <button id="lut-all" type="button" title="Select all (Ctrl+A)">ALL</button>
         <button id="lut-none" type="button">NONE</button>
@@ -1054,6 +1097,9 @@
         <aside class="lut-ops-pane" aria-label="LUT painting and generation controls">
           <section class="lut-toolbox">
             <h3>COLOUR DECK</h3>
+            <label id="lut-colourway-search-label" hidden>FIND UI SELECTOR / HEX
+              <input id="lut-colourway-search" type="search" placeholder="e.g. .lut / window / #5C7041" aria-label="Find UI swatches by CSS selector, original hex or index">
+            </label>
             <div class="lut-color-row">
               <span id="lut-swatch-a" class="lut-swatch" aria-hidden="true"></span>
               <label>A <input id="lut-color-a" type="color" value="#ED57AE" aria-label="Primary brush colour A"></label>
@@ -1102,12 +1148,17 @@
           <section class="lut-toolbox">
             <h3>PALETTE I/O</h3>
             <div class="lut-button-grid">
-              <button id="export-lut" type="button" title="Copy complete LUT as 32 lines of 8 RRGGBB values">EXPORT</button>
-              <button id="lut-save" type="button" title="Download complete LUT as plain text">SAVE TXT</button>
-              <button id="lut-import" type="button" data-lut-write title="Import exactly 256 valid colours">IMPORT</button>
+              <button id="export-lut" type="button" title="Copy current palette to clipboard">EXPORT</button>
+              <button id="lut-save" type="button" title="Download active palette">SAVE FILE</button>
+              <button id="lut-import" type="button" data-lut-write title="Import a complete palette or UI colourway JSON">IMPORT</button>
+              <button id="lut-reset-skin" type="button" data-lut-write hidden
+                title="Undoable reset of the active interface colourway">RESTORE ORIGINAL SKIN</button>
             </div>
+            <p id="lut-colourway-info" hidden></p>
           </section>
-          <p class="lut-help">DRAG SELECT · SHIFT ADD · CTRL TOGGLE · ALT SUBTRACT<br>
+          <p class="lut-help">UI TARGET EDITS INTERFACE CSS ONLY · PLASMA TARGET EDITS RENDERER<br>
+            RECOVER UI SKIN: CTRL+ALT+SHIFT+0<br>
+            DRAG SELECT · SHIFT ADD · CTRL TOGGLE · ALT SUBTRACT<br>
             LEFT / RIGHT BRUSH = A / B · PICK = A / B<br>
             DOUBLE-CLICK CELL TO EDIT HEX · CTRL+C/X/V/Z/Y
           </p>

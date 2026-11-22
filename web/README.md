@@ -192,6 +192,55 @@ and physical Firefox pointer interaction still require owner testing.
 CI also exercises a live Chromium/Pyodide smoke test and captures desktop/mobile
 Winamp-style screenshots as downloadable workflow artifacts.
 
+## UI colourways — skin LUT target
+
+The spatial editor's **TARGET** selector switches between **PLASMA LUT** and
+**UI COLOURWAY**. Both targets use the same 16×16 painting, selection, region
+clipboard, 64-step history, gradients, transforms and colour deck. Their data
+are **independent**:
+
+- **PLASMA LUT** retains the existing worker-backed setLut messages, ten
+  renderer banks, procedural materialisation and Python configuration storage.
+- **UI COLOURWAY** edits browser CSS only. It does not send worker messages,
+  change the rendered plasma colours, or rewrite stored renderer configuration.
+  UI colourway banks 00–09 are separate local profiles and take effect immediately.
+
+The original Winamp-inspired interface is the default in every colourway bank.
+The stylesheet's authored RGB references are represented by distinct colourway
+swatches (around 200 slots; the exact count is shown in the editor).
+Multiple CSS uses of the same original RGB share a swatch. Transparent colours
+share their RGB swatch but retain their individual alpha values. The remaining
+cells are reserved scratch swatches; editing these will not affect the skin
+until assigned by a future version.
+
+**Editing:** select UI COLOURWAY, choose an interface swatch, then use the A/B
+colour deck, Fill, Brush, gradients or direct hexadecimal cell editing.
+Hover a swatch to identify its original CSS colour and selector. Use **FIND UI SELECTOR / HEX** to dim nonmatching swatches (for instance, search for `.lut`, `window` or an original hex code). The interface
+changes as soon as the edit commits. The Bank selector chooses between ten
+independent profiles. Undo/Redo is independent for each UI colourway and
+plasma LUT bank.
+
+**Saving and moving themes:** UI edits and active bank persist using a
+separate localStorage key, plasmaterm.web-v0.3a.ui-colourways. The existing
+renderer and display settings are unchanged. **EXPORT** copies a
+PLASMATERM_UI_COLOURWAY_V1 JSON document; **SAVE FILE** downloads it.
+**IMPORT** accepts that file or a complete plain-text 256-colour LUT.
+JSON stores replacements keyed by the original CSS colour rather than its
+current grid index, so future CSS changes do not silently remap saved swatches.
+The Xenofield region clipboard also works on UI selections. Exporting a
+PLASMA LUT still produces the 32×8 legacy text matrix.
+
+**Restoring accessibility:** **RESTORE ORIGINAL SKIN** is an undoable operation
+for the active UI bank. If the skin becomes unreadable, press
+**Ctrl+Alt+Shift+0** anywhere in the page to reset the active UI bank, or
+open the page with **?skin-default=1** to bypass stored palettes for that
+session. Neither action alters the plasma renderer.
+
+**Scope:** the colourway controls UI CSS colour declarations and existing RGB
+accent variables, including gradients, borders and alpha-bearing shadows.
+The rendered plasma and user-controlled terminal background are deliberately
+excluded. Colourways are stored per browser/origin, not in native config files.
+
 The entire workspace stays at `100vw × 100dvh` with no document scrolling.
 On narrow displays PlasmaTerm fills the viewport behind the floating windows;
 portrait defaults stack them, while short landscape defaults place them side

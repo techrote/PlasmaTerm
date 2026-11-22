@@ -1,4 +1,16 @@
 import { installLutEditor } from './plasma-lut-editor.mjs';
+import { createColourwayController } from './plasma-colourway.mjs';
+
+// Browser skin preferences intentionally live outside the renderer's persisted
+// Python configuration and outside its ten LUT banks.
+let colourwayStorage = null;
+try { colourwayStorage = window.localStorage; } catch { /* session-only */ }
+const colourways = createColourwayController({
+  stylesheet: document.querySelector('head style'),
+  root: document.documentElement,
+  storage: colourwayStorage,
+  search: location.search,
+});
 
 const CONFIG_STORAGE_KEY = 'plasmaterm.web-v0.2b.config';
 const LEGACY_CONFIG_STORAGE_KEYS = [
@@ -157,6 +169,7 @@ function sendLutColors(colors) {
 // active LUT materialisation, revisions, presets, and persisted config.
 const lutEditor = installLutEditor({
   root: lutWindow,
+  colourways,
   onCommit: sendLutColors,
   onSelectSlot: (slot) => {
     // Use the canonical Ctrl+digit worker route so bank switching updates
@@ -173,6 +186,19 @@ const lutEditor = installLutEditor({
     statusElement.textContent = String(message);
   },
 });
+
+// Emergency recovery even if a manually edited colourway makes the toolbar
+// illegible. This shortcut works from either editor target or any window.
+window.addEventListener('keydown', (event) => {
+  if (!event.ctrlKey || !event.shiftKey || !event.altKey ||
+      !['Digit0', 'Numpad0'].includes(event.code)) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  colourways.resetActiveBank();
+  lutEditor.refreshColourway();
+  statusElement.hidden = false;
+  statusElement.textContent = 'UI colourway restored to original Winamp skin.';
+}, { capture: true });
 
 function updateLutFields(state = lutState) {
   if (!Array.isArray(state.colors) || state.colors.length !== 256) return;

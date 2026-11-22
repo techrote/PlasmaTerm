@@ -66,6 +66,57 @@ try {
   await page.waitForFunction(() => document.querySelector('#lut-window')?.dataset.lutSlot === '1', null, { timeout: 10000 });
   assert.ok(!errors.length, 'page errors: ' + errors.join('\n'));
 
+  // The LUT window also edits a separate persistent UI skin. These writes
+  // must re-colour CSS, not submit another setLut to the renderer.
+  await page.waitForFunction(() => document.querySelector('#terminal')?.dataset.lutSlot === '1' &&
+    document.querySelector('#terminal')?.dataset.lutRevision !== undefined,
+  null, { timeout: 10000 });
+  const rendererRevision = await page.locator('#terminal').getAttribute('data-lut-revision');
+  await page.locator('#lut-target').selectOption('ui');
+  assert.equal(await page.locator('#lut-window').getAttribute('data-lut-mode'), 'ui');
+  await page.locator('#lut-colourway-search').fill('.lut');
+  assert.ok(await page.locator('#lut-grid .lut-cell.is-ui-filtered').count() > 0);
+  await page.locator('#lut-colourway-search').fill('');
+  assert.equal(await page.locator('#lut-grid .lut-cell.is-ui-filtered').count(), 0);
+  const originalUi = await page.locator('#lut-grid .lut-field').first().inputValue();
+  await page.locator('#lut-select').click();
+  await page.locator('#lut-none').click();
+  await page.locator('#lut-grid .lut-field').first().click();
+  await page.locator('#lut-hex-a').fill('C0FFEE');
+  await page.locator('#lut-hex-a').press('Tab');
+  await page.locator('#lut-fill').click();
+  assert.equal(await page.locator('#lut-grid .lut-field').first().inputValue(), 'C0FFEE');
+  assert.equal(await page.evaluate(() =>
+    document.documentElement.style.getPropertyValue('--plasmaterm-ui-000')), '#C0FFEE');
+  await page.locator('#lut-undo').click();
+  assert.equal(await page.locator('#lut-grid .lut-field').first().inputValue(), originalUi);
+  await page.locator('#lut-redo').click();
+  assert.equal(await page.locator('#lut-grid .lut-field').first().inputValue(), 'C0FFEE');
+
+  // A fast pointer jump must still paint every intermediate cell; one undo
+  // restores the whole stroke rather than just the final stamp.
+  await page.locator('#lut-brush').click();
+  await page.locator('#lut-brush-shape').selectOption('pixel');
+  await page.locator('#lut-brush-size').fill('1');
+  const middleBefore = await page.locator('#lut-grid .lut-field').nth(35).inputValue();
+  const startBox = await page.locator('#lut-grid .lut-cell').nth(32).boundingBox();
+  const endBox = await page.locator('#lut-grid .lut-cell').nth(38).boundingBox();
+  assert.ok(startBox && endBox);
+  await page.mouse.move(startBox.x + startBox.width / 2, startBox.y + startBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(endBox.x + endBox.width / 2, endBox.y + endBox.height / 2, { steps: 1 });
+  await page.mouse.up();
+  assert.equal(await page.locator('#lut-grid .lut-field').nth(35).inputValue(), 'C0FFEE');
+  await page.locator('#lut-undo').click();
+  assert.equal(await page.locator('#lut-grid .lut-field').nth(35).inputValue(), middleBefore);
+
+  // Switching UI banks must not touch the plasma LUT bank or its revision.
+  await page.locator('#lut-bank').selectOption('1');
+  assert.equal(await page.locator('#lut-grid .lut-field').first().inputValue(), originalUi);
+  await page.locator('#lut-bank').selectOption('0');
+  assert.equal(await page.locator('#lut-grid .lut-field').first().inputValue(), 'C0FFEE');
+  assert.equal(await page.locator('#terminal').getAttribute('data-lut-revision'), rendererRevision);
+
   await mkdir('artifacts', { recursive: true });
   await page.screenshot({ path: 'artifacts/plasmaterm-winamp-modern-desktop.png', fullPage: true });
 
@@ -78,7 +129,25 @@ try {
   assert.equal(await page.locator('#lut-grid .lut-cell').count(), 256);
   await page.screenshot({ path: 'artifacts/plasmaterm-winamp-modern-mobile.png', fullPage: true });
   assert.ok(!errors.length, 'page errors: ' + errors.join('\n'));
-  process.stdout.write('Browser smoke passed: live worker, 256 cells, rectangle selection, fill, undo/redo, brush, pick, bank switch, desktop/mobile layout.\n');
+
+  // Reload from actual browser localStorage, not a mocked controller.
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+  assert.equal(await page.evaluate(() =>
+    document.documentElement.style.getPropertyValue('--plasmaterm-ui-000')), '#C0FFEE');
+  await page.waitForFunction(() =>
+    document.querySelector('#lut-grid')?.getAttribute('aria-disabled') === 'false',
+    null, { timeout: 90000 });
+  if (await page.locator('#lut-window').isHidden())
+    await page.locator('#restore-lut').click();
+  await page.locator('#lut-target').selectOption('ui');
+  assert.equal(await page.locator('#lut-grid .lut-field').first().inputValue(), 'C0FFEE');
+  // A recovery chord must work even if the skin colours become unreadable.
+  await page.keyboard.press('Control+Shift+Alt+0');
+  assert.equal(await page.locator('#lut-grid .lut-field').first().inputValue(), originalUi);
+  assert.equal(await page.evaluate(() =>
+    document.documentElement.style.getPropertyValue('--plasmaterm-ui-000')), '#' + originalUi);
+  assert.ok(!errors.length, 'page errors: ' + errors.join('\n'));
+  process.stdout.write('Browser smoke passed: live worker, 256 cells, rectangle selection, fill, undo/redo, brush, pick, bank switch, independent colourway editing, UI bank isolation, reload persistence, skin reset and desktop/mobile layout.\n');
 } finally {
   await browser.close();
 }

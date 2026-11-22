@@ -211,7 +211,7 @@ function brushOffsets(shape, size, seed, index) {
   return offsets;
 }
 
-export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
+export function installLutEditor({ root, onCommit, onError, onSelectSlot, colourways }) {
   const $ = (id) => root.querySelector('#' + id);
   const grid = $('lut-grid'), strip = $('lut-strip'), status = $('lut-selection-status');
   const cells = [], inputs = [], historyBySlot = new Map();
@@ -220,20 +220,88 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
   let tool = 'select', drag = null, stroke = null, clipboard = null, pending = [];
   let strokeSeed = 0, note = '';
   const colors = { a: 'ED57AE', b: '32A68F' };
+  let mode = 'plasma', workerReady = false, rendererHasState = false;
+  let rendererState = { ...state, colors: [...state.colors] };
+  let requestedSlot = null;
+  const samePalette = (left, right) =>
+    left.every((value, index) => value === right[index]);
+  const stackKey = (target = mode, slot = state.slot) => target + ':' + slot;
+
+  function decorateGrid() {
+    const entries = colourways?.catalog.entries || [];
+    const filter = $('lut-colourway-search').value.trim().toLowerCase().replace(/^#/, '');
+    let matches = 0;
+    for (let i = 0; i < inputs.length; i += 1) {
+      const item = mode === 'ui' ? entries[i] : null;
+      const matchesFilter = Boolean(item) && (!filter ||
+        item.original.toLowerCase().includes(filter) ||
+        item.selector.toLowerCase().includes(filter) ||
+        String(i).includes(filter));
+      if (matchesFilter) matches += 1;
+      cells[i].classList.toggle('is-ui-filtered', mode === 'ui' &&
+        Boolean(filter) && !matchesFilter);
+      const description = item
+        ? 'UI colour ' + i + ' · #' + item.original + ' · ' + item.selector
+        : mode === 'ui' ? 'Reserved colourway swatch ' + i
+          : 'Plasma LUT colour ' + i;
+      inputs[i].setAttribute('aria-label', description + ', double click to edit');
+      cells[i].title = description;
+      cells[i].classList.toggle('is-ui-reserved', mode === 'ui' && !item);
+    }
+    $('lut-reset-skin').hidden = mode !== 'ui';
+    $('lut-colourway-search-label').hidden = mode !== 'ui';
+    $('lut-colourway-info').hidden = mode !== 'ui';
+    $('lut-colourway-info').textContent = entries.length +
+      ' BOUND COLOURS · ' + (LUT_LENGTH - entries.length) +
+      ' RESERVED' + (filter ? ' · ' + matches + ' MATCHING' : '');
+  }
+  $('lut-colourway-search').addEventListener('input', decorateGrid);
+  function activateTarget(next) {
+    if (next !== 'plasma' && next !== 'ui') return;
+    if (mode === next) return;
+    if (mode === 'plasma') rendererState = state;
+    mode = next;
+    state = mode === 'ui' ? colourways.state() : rendererState;
+    hasState = mode === 'ui' || rendererHasState;
+    selected = new Set(); active = 0;
+    root.dataset.lutMode = mode;
+    $('lut-target').value = mode;
+    $('lut-bank').querySelector('option[value="none"]').hidden = mode === 'ui';
+    decorateGrid();
+    setReady(workerReady);
+    paintAll();
+    report(mode === 'ui' ? 'EDITING INTERFACE SKIN' : 'EDITING PLASMA LUT');
+  }
+  $('lut-target').addEventListener('change', (event) => activateTarget(event.target.value));
   $('lut-bank').addEventListener('change', (event) => {
     const slot = event.target.value;
     if (!ready || !hasState || slot === state.slot) return;
+    if (mode === 'ui') {
+      if (!colourways.selectBank(slot)) {
+        $('lut-bank').value = state.slot;
+        return report('COLOURWAY BANK IS UNAVAILABLE', true);
+      }
+      state = colourways.state();
+      selected.clear(); active = 0;
+      paintAll();
+      return report('COLOURWAY ' + slot);
+    }
     if (!/^[0-9]$/.test(slot) || !onSelectSlot?.(slot)) {
       $('lut-bank').value = state.slot;
       report('LUT BANK SWITCH IS UNAVAILABLE', true);
+    } else {
+      requestedSlot = slot;
+      setReady(workerReady);
+      report('SWITCHING PLASMA BANK');
     }
   });
   const writeButtons = [...root.querySelectorAll('[data-lut-write]')];
   const toolButtons = { select: $('lut-select'), brush: $('lut-brush'), pick: $('lut-pick') };
 
   function stacks() {
-    if (!historyBySlot.has(state.slot)) historyBySlot.set(state.slot, { undo: [], redo: [] });
-    return historyBySlot.get(state.slot);
+    const key = stackKey();
+    if (!historyBySlot.has(key)) historyBySlot.set(key, { undo: [], redo: [] });
+    return historyBySlot.get(key);
   }
   function report(message, error = false) {
     note = String(message || '');
@@ -249,8 +317,15 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
       'NO SELECTION · ACTIVE ' + active) + (note ? ' · ' + note : '');
     $('lut-undo').disabled = !stacks().undo.length || !ready;
     $('lut-redo').disabled = !stacks().redo.length || !ready;
-    $('lut-active-slot').textContent = state.slot === 'none' ?
-      'PROCEDURAL → SLOT 0' : 'SLOT ' + state.slot;
+    $('lut-active-slot').textContent = mode === 'ui'
+      ? 'UI BANK ' + String(state.slot).padStart(2, '0')
+      : state.slot === 'none' ? 'PROCEDURAL → SLOT 0' : 'SLOT ' + state.slot;
+    if (mode === 'ui' && selected.size === 1) {
+      const info = colourways.catalog.entries[active];
+      if (info) status.textContent += ' · SOURCE #' + info.original +
+        ' · ' + info.selector;
+      else status.textContent += ' · RESERVED SWATCH';
+    }
   }
   function foreground(hex) {
     const channels = rgb(hex).map((v) => {
@@ -290,8 +365,9 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
     updateStatus();
   }
   function setReady(value) {
-    ready = Boolean(value);
-    const enabled = ready && hasState;
+    workerReady = Boolean(value);
+    ready = mode === 'ui' || workerReady;
+    const enabled = ready && hasState && (mode === 'ui' || requestedSlot === null);
     for (const button of writeButtons) button.disabled = !enabled;
     $('lut-bank').disabled = !enabled;
     grid.setAttribute('aria-disabled', String(!enabled));
@@ -301,60 +377,68 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
     if (!validPalette(incoming?.colors)) return;
     const next = { colors: incoming.colors.map(normalizeHex),
       slot: String(incoming.slot ?? 'none'), revision: Number(incoming.revision) || 0 };
-    // Worker LUT writes are sequential, but a brush stroke or double-click can
-    // arrive before earlier write acknowledgements. Never roll the preview
-    // back or erase undo history for a stale intermediate acknowledgement.
+    // The worker can acknowledge a queued write while the UI colourway editor
+    // is open. Reconcile only the cached plasma state; never repaint the UI LUT.
     const ackIndex = pending.findIndex((entry) =>
-      entry.colors.every((value, index) => value === next.colors[index]));
+      (entry.slot === next.slot || (entry.slot === 'none' && next.slot === '0')) &&
+      samePalette(entry.colors, next.colors));
     if (ackIndex >= 0) {
-      const [ack] = pending.splice(ackIndex, 1);
-      // Remove only entries preceding this acknowledged write, preserving
-      // subsequent local operations that are still in flight.
-      if (ackIndex) pending.splice(0, ackIndex);
-      if (state.slot === 'none' && next.slot === '0') {
-        const proceduralHistory = historyBySlot.get('none');
-        if (proceduralHistory) historyBySlot.set('0', proceduralHistory);
-        historyBySlot.delete('none');
+      pending.splice(0, ackIndex + 1);
+      if (rendererState.slot === 'none' && next.slot === '0') {
+        const history = historyBySlot.get('plasma:none');
+        if (history) historyBySlot.set('plasma:0', history);
+        historyBySlot.delete('plasma:none');
       }
       if (pending.length) {
-        state.slot = next.slot;
-        state.revision = next.revision;
-        root.dataset.lutSlot = state.slot;
-        root.dataset.lutRevision = String(state.revision);
-        $('lut-bank').value = state.slot;
-        updateStatus();
+        rendererState = { ...rendererState, slot: next.slot, revision: next.revision };
+        if (mode === 'plasma') {
+          state = rendererState;
+          root.dataset.lutSlot = state.slot;
+          root.dataset.lutRevision = String(state.revision);
+          $('lut-bank').value = state.slot;
+          updateStatus();
+        }
         return;
       }
     } else {
-      // External preset/LUT change: abandon in-flight local history rather
-      // than applying an invalid undo to a different palette.
+      // External LUT/preset change cannot reuse prior undo state.
       pending = [];
-      if (hasState && next.slot === state.slot &&
-          !next.colors.every((value, index) => value === state.colors[index])) {
-        historyBySlot.delete(next.slot);
-      }
+      if (rendererHasState && next.slot === rendererState.slot &&
+          !samePalette(next.colors, rendererState.colors))
+        historyBySlot.delete(stackKey('plasma', next.slot));
     }
-    state = next;
+    rendererState = next;
+    rendererHasState = true;
+    if (requestedSlot !== null && requestedSlot === next.slot)
+      requestedSlot = null;
+    if (mode !== 'plasma') return;
+    state = rendererState;
     hasState = true;
     root.dataset.lutSlot = state.slot;
     root.dataset.lutRevision = String(state.revision);
     $('lut-bank').value = state.slot;
-    setReady(ready);
+    setReady(workerReady);
     paintAll();
   }
   function commit(next, label) {
     const palette = next.map(normalizeHex);
-    if (!ready || !hasState) return report('WAIT FOR PLASMATERM TO LOAD', true), false;
+    if (!ready || !hasState || (mode === 'plasma' && requestedSlot !== null))
+      return report('TARGET IS NOT READY FOR EDITING', true), false;
     if (!validPalette(palette)) return report('INVALID 256-COLOUR LUT', true), false;
-    if (palette.every((value, i) => value === state.colors[i])) return false;
+    if (samePalette(palette, state.colors)) return false;
     const before = [...state.colors];
-    if (!onCommit(palette)) return report('WORKER REJECTED LUT WRITE', true), false;
+    const accepted = mode === 'ui'
+      ? colourways.replacePalette(palette)
+      : onCommit(palette);
+    if (!accepted) return report('PALETTE WRITE REJECTED', true), false;
     const stack = stacks();
     stack.undo.push({ before, after: [...palette], label });
     if (stack.undo.length > 64) stack.undo.shift();
     stack.redo = [];
-    pending.push({ slot: state.slot, colors: [...palette] });
+    if (mode === 'plasma') pending.push({ slot: state.slot, colors: [...palette] });
     state.colors = palette;
+    if (mode === 'ui') state.revision = colourways.state().revision;
+    else rendererState = state;
     paintAll();
     report(label);
     return true;
@@ -365,10 +449,17 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
     const record = from.pop();
     if (!record) return;
     const palette = direction === 'undo' ? record.before : record.after;
-    if (!onCommit(palette)) { from.push(record); return report('WORKER REJECTED LUT WRITE', true); }
+    if (mode === 'plasma' && requestedSlot !== null) {
+      from.push(record);
+      return report('WAIT FOR PLASMA BANK SWITCH', true);
+    }
+    const accepted = mode === 'ui' ? colourways.replacePalette(palette) : onCommit(palette);
+    if (!accepted) { from.push(record); return report('PALETTE WRITE REJECTED', true); }
     to.push(record);
-    pending.push({ slot: state.slot, colors: [...palette] });
+    if (mode === 'plasma') pending.push({ slot: state.slot, colors: [...palette] });
     state.colors = [...palette];
+    if (mode === 'ui') state.revision = colourways.state().revision;
+    else rendererState = state;
     paintAll();
     report(direction.toUpperCase() + ' ' + record.label);
   }
@@ -495,7 +586,8 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
   }
   grid.addEventListener('contextmenu', (event) => event.preventDefault());
   grid.addEventListener('pointerdown', (event) => {
-    if (![0, 2].includes(event.button) || !ready || !hasState) return;
+    if (![0, 2].includes(event.button) || !ready || !hasState ||
+        (mode === 'plasma' && requestedSlot !== null)) return;
     if (event.target.matches('input:not([readonly])')) return;
     const cell = event.target.closest('.lut-cell');
     if (!cell) return;
@@ -510,7 +602,8 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
     }
     if (tool === 'brush') {
       stroke = { draft: [...state.colors], indices: new Set(),
-        color: colors[event.button === 2 ? 'b' : 'a'], seed: ++strokeSeed };
+        color: colors[event.button === 2 ? 'b' : 'a'], seed: ++strokeSeed,
+        last: index };
       applyStroke(index);
     } else {
       const mode = event.altKey ? 'subtract' :
@@ -524,8 +617,18 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
     if (!drag && !stroke) return;
     const index = cellAt(event);
     if (index === null) return;
-    if (stroke) applyStroke(index);
-    else if (index !== drag.last) {
+    if (stroke) {
+      // Events are not delivered once per grid cell during fast movement:
+      // interpolate through the skipped cells so a stroke stays connected.
+      const [ax, ay] = xy(stroke.last), [bx, by] = xy(index);
+      const steps = Math.max(Math.abs(bx - ax), Math.abs(by - ay));
+      for (let step = 1; step <= steps; step += 1) {
+        const x = Math.round(ax + (bx - ax) * step / steps);
+        const y = Math.round(ay + (by - ay) * step / steps);
+        applyStroke(at(x, y));
+      }
+      stroke.last = index;
+    } else if (index !== drag.last) {
       drag.last = index;
       selectBox(drag.anchor, index, drag.mode, drag.base);
     }
@@ -582,18 +685,31 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
     return makeRegion(state.colors, selected.size ? selected : new Set([active]));
   }
   async function copy(cut = false) {
-    const region = currentRegion();
+    const originMode = mode, originSlot = state.slot;
+    const ids = selected.size ? indicesOf(selected) : [active];
+    const region = makeRegion(state.colors, new Set(ids));
     clipboard = region;
+    // Cut immediately against the captured target. An asynchronous clipboard
+    // permission prompt must never clear a later selection or different bank.
+    if (cut) {
+      const next = [...state.colors];
+      for (const index of ids) next[index] = '000000';
+      commit(next, 'CUT REGION');
+    }
     try { await navigator.clipboard?.writeText(encodeRegion(region)); } catch { /* local fallback */ }
-    if (cut) $('lut-clear').click();
-    report(cut ? 'CUT REGION' : 'COPIED REGION');
+    if (mode === originMode && state.slot === originSlot)
+      report(cut ? 'CUT REGION' : 'COPIED REGION');
   }
   async function paste() {
+    const originMode = mode, originSlot = state.slot;
+    const originSelection = new Set(selected), originActive = active;
     let region = null;
     try { region = decodeRegion(await navigator.clipboard?.readText()); } catch { /* local fallback */ }
     region ||= clipboard;
     if (!region) return report('NOTHING TO PASTE', true);
-    commit(pasteRegion(state.colors, region, selected, active), 'PASTE REGION');
+    if (mode !== originMode || state.slot !== originSlot)
+      return report('PASTE TARGET CHANGED; RETRY', true);
+    commit(pasteRegion(state.colors, region, originSelection, originActive), 'PASTE REGION');
   }
   $('lut-copy').onclick = () => copy();
   $('lut-cut').onclick = () => copy(true);
@@ -637,6 +753,7 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
   setScale(25);
 
   function exportText() {
+    if (mode === 'ui') return colourways.exportCurrent();
     const lines = [];
     for (let i = 0; i < LUT_LENGTH; i += 8)
       lines.push(state.colors.slice(i, i + 8).join(', '));
@@ -645,28 +762,42 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
   $('export-lut').onclick = async () => {
     try {
       await navigator.clipboard.writeText(exportText());
-      report('256 COLOURS EXPORTED TO CLIPBOARD');
+      report(mode === 'ui' ? 'UI COLOURWAY EXPORTED AS JSON' : '256 COLOURS EXPORTED TO CLIPBOARD');
     } catch (error) { report('CLIPBOARD: ' + error.message, true); }
   };
   $('lut-save').onclick = () => {
-    const blob = new Blob([exportText()], { type: 'text/plain' });
+    const isUi = mode === 'ui';
+    const blob = new Blob([exportText()], { type: isUi ? 'application/json' : 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url; link.download = 'PlasmaTerm-LUT-' + state.slot + '.txt';
+    link.href = url;
+    link.download = isUi ? 'PlasmaTerm-UI-Colourway-' + state.slot + '.json'
+      : 'PlasmaTerm-LUT-' + state.slot + '.txt';
     link.click(); URL.revokeObjectURL(url);
   };
   $('lut-import').onclick = () => $('lut-file').click();
   $('lut-file').onchange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const originMode = mode, originSlot = state.slot;
     try {
-      const region = decodeRegion(await file.text());
-      if (!region || region.width !== LUT_SIDE || region.height !== LUT_SIDE ||
-          region.mask.some((value) => !value))
-        throw new Error('Import requires exactly 256 valid RRGGBB colours.');
-      commit(region.colors, 'IMPORT LUT');
+      const text = await file.text();
+      if (mode !== originMode || state.slot !== originSlot)
+        throw new Error('Import target changed while reading file.');
+      const palette = mode === 'ui' ? colourways.parseImport(text) : null;
+      if (palette) commit(palette, 'IMPORT UI COLOURWAY');
+      else {
+        const region = decodeRegion(text);
+        if (!region || region.width !== LUT_SIDE || region.height !== LUT_SIDE ||
+            region.mask.some((value) => !value))
+          throw new Error('Import requires a complete 256-colour LUT or a UI colourway JSON.');
+        commit(region.colors, 'IMPORT LUT');
+      }
     } catch (error) { report(error.message, true); }
     event.target.value = '';
+  };
+  $('lut-reset-skin').onclick = () => {
+    if (mode === 'ui') commit(colourways.catalog.defaultPalette, 'RESTORE DEFAULT UI SKIN');
   };
   strip.addEventListener('pointerdown', (event) => {
     const rect = strip.getBoundingClientRect();
@@ -705,7 +836,17 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
   });
   updateColors();
   setTool('select');
+  root.dataset.lutMode = mode;
+  decorateGrid();
   setReady(false);
   paintAll();
-  return { sync, setReady, getSelection: () => indicesOf(selected) };
+  return {
+    sync, setReady, activateTarget, getSelection: () => indicesOf(selected),
+    refreshColourway: () => {
+      if (mode !== 'ui') return;
+      state = colourways.state();
+      historyBySlot.delete(stackKey('ui', state.slot));
+      paintAll();
+    },
+  };
 }
