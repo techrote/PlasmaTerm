@@ -1,7 +1,7 @@
-# PlasmaTerm web-v0.2b
+# PlasmaTerm web-v0.3a
 
 This directory is the bounded browser presentation of the frozen PlasmaTerm
-`v0.1a` release. The page version is `web-v0.2b`; native configuration files
+`v0.1a` release. The page version is `web-v0.3a`; native configuration files
 remain compatible. It runs the repository's Python renderer and
 configuration generator in Pyodide, presents their ANSI output through
 xterm.js, and intentionally does not include PlasmaTerm's later TCP control
@@ -25,28 +25,30 @@ not supported.
 
 The page is a no-scroll workspace containing four independent faux-terminal
 windows. A fresh desktop load begins at Pt 24 and exactly 36×24 characters;
-Keybed, Modulation, and LUT begin
-docked. Windows may overlap, are brought forward when
+Keybed and Modulation begin visible, while LUT starts
+minimised. Windows may overlap, are brought forward when
 used, and may be dragged by only the blank part of their compact title bars.
 Their positions and stacking order last for the session rather than being
 written to storage.
 
-The approximately 24px title bars are blank and titleless, with centred 8px
-lights and flush, square-edged fields and buttons. These lights are controls
-rather than decoration. Keybed, Modulation, and LUT each have a yellow minimize
-control; minimizing adds a labelled restore button to PlasmaTerm's title bar.
-Restoring returns the window to its last position, clamps it to the viewport,
-and brings it forward. PlasmaTerm's green control toggles between its last good
-desktop geometry and a viewport-filling layout while scaling Pt to retain the
-same character resolution. When the viewport is wider than the natural
-monospaced grid, fullscreen also expands cell spacing so all 36 columns fill
-the available width without adding columns. On narrow/mobile layouts,
-where PlasmaTerm already fills the viewport, green instead moves it between the
-front and back of the stack. PlasmaTerm's red control, or `Esc` anywhere on the
-page, restores the Pt 24, 36×24 desktop layout, responsive starting positions,
-and default stacking: Keybed and Modulation visible at the front, LUT docked.
-This global reset changes layout and display scaling only, not the current
-plasma or Energy values.
+The roughly 24px title bars use compact Winamp Modern-inspired graphite
+chrome, lime LCD text, ruled drag regions, bevelled controls and labelled
+**PLASMATERM**, **KEYBED**, **MODULATION** and **LUT EDITOR** windows. The small
+square light-shaped controls are functional. Keybed, Modulation and LUT have
+minimise controls; minimising adds a labelled restore button to PlasmaTerm's
+title bar. Restoring returns the window to its last position, clamps it to
+the viewport and brings it to the front.
+
+PlasmaTerm's green control toggles between desktop geometry and a
+viewport-filling display while scaling Pt to retain the same character grid.
+When there is extra width, fullscreen expands cell spacing rather than
+silently adding columns. On narrow/mobile displays, where PlasmaTerm already
+fills the viewport, green switches between the front and back of the stack.
+PlasmaTerm's red control or Escape outside the LUT editor restores Pt 24, 36×24
+characters and the default window positions/stacking (Keybed and Modulation
+visible, LUT docked). Escape *inside* the LUT editor instead cancels a cell
+edit or clears the current selection. Reset only affects presentation, not
+plasma parameters or the 256-colour palettes.
 
 Hover PlasmaTerm to reveal its four centre-anchored resize handles. Their hit
 areas sit fully outside the window border so they never cover the title-bar
@@ -102,30 +104,89 @@ once per press. Physical `E/D` and `R/F` retain procedural hue-range
 adjustments but are intentionally absent from the mouse keybed. `O/L` do not
 change FPS.
 
-## LUT editor
+## LUT editor — Xenofield V4.3b spatial tools
 
-Restore **LUT** from PlasmaTerm's title bar to edit the active 256-colour
-palette as `RRGGBB` fields. The grid is 16×16 on wide/landscape layouts and
-8×32 in narrow portrait layouts. Every field uses its represented colour as
-its background, automatically selects legible light or dark text, and follows
-normal Tab order. A valid edit is committed and persisted as focus advances;
-the visualization updates immediately. Editing a procedural palette first
-materializes its 256-colour resampling into LUT slot 0.
+Restore **LUT** from PlasmaTerm's title bar. The web editor now uses a
+square **16×16** palette map with 256 cells, a full-palette preview strip,
+a compact titlebar tool row and a second selection/clipboard row. The
+vertically scrollable right-hand rack groups colour controls, painting,
+transforms, palette generation and palette I/O. On narrow screens the same
+16×16 editing topology is retained rather than reflowing into 8×32; the
+operations rack moves below the map. The overall page stays no-scroll,
+while the local rack may scroll.
 
-To replace the complete LUT, focus the first field and paste exactly 256 valid
-values. Commas or whitespace may separate values, and brackets, quotes, and an
-optional leading `#` are accepted. The replacement is atomic: an invalid value
-or count leaves the current LUT unchanged. **Export** copies uppercase values
-as 32 lines of eight comma-and-space-separated entries, which can be pasted
-back into the same first field. Manual LUT edits do not consume or create
-Randomize undo history.
+This editor is based on Xenofield's V4.3b spatial LUT interaction model,
+not a replacement for the renderer's palette representation. All worker
+writes remain **exactly 256 uppercase RRGGBB values**. The existing
+setLut worker path handles materialisation, rendering, active slot and
+local configuration persistence. Editing while on a procedural palette
+still materialises the result in stored LUT slot 0. The existing ten
+palette banks, preset shortcuts and palette cycling remain unchanged.
 
-The LUT title bar also provides **Randomise** and a synchronized 0–100
-**Scale** field/slider, defaulting to 25. Randomise builds a smooth cyclic
-eight-anchor palette and blends the current LUT toward it by the selected
-percentage: 0 leaves the LUT unchanged, 25 makes a restrained variation, and
-100 replaces it with a fully new coherent palette. It uses the same atomic LUT
-write path as manual editing and does not affect Randomize undo history.
+### Selection and painting
+
+- **SELECT:** click or drag to make a rectangular selection. Shift-drag
+  adds; Ctrl/Cmd-drag toggles; Alt-drag subtracts. Toolbar commands
+  select all, clear selection, invert, select row or select column.
+- **BRUSH:** left paints colour A, right paints B. Choose pixel, round,
+  square, diamond or irregular brush, size 1–5; a complete stroke is one
+  undoable edit. **PICK:** left samples colour A, right samples B.
+- **COLOUR DECK:** dual HTML colour pickers and six-digit hex fields,
+  live swatches, and swap A/B. Double-click any palette cell for direct
+  hexadecimal editing; Enter applies and Esc cancels.
+- **TRANSFORMS:** fill selected cells with A, generate horizontal,
+  vertical, diagonal or radial A→B gradients, flip horizontally or
+  vertically, rotate 180°, or clear selected cells. If there is no
+  selection, a fill/clear targets the active cell; gradients use all 256.
+- **UNDO/REDO:** 64 history records per active LUT bank, covering direct
+  cell edits, full and region pastes, cut, painting, transforms, gradients
+  and randomisation. These do not alter the independent two-step
+  *plasma-preset Randomize Undo* in the Keybed.
+
+### Clipboard, import and export
+
+**COPY/CUT/PASTE** transfers a rectangular LUT region including a
+shape-preserving selection mask. Copying the selection retains holes,
+so pasting sparse regions does not write to excluded cells. Pasting onto
+a selected destination tiles a smaller region and respects its mask;
+pasting with no selection places the region at the active cell, clipped
+to the 16×16 edges. The textual clipboard header is
+**XENOFIELD_LUT_REGION_V1**, allowing LUT regions to be transferred with
+Xenofield's V4.3b editor. Native plain-text hexadecimal matrices are
+also accepted.
+
+**EXPORT** copies the full palette as 32 text lines with eight
+comma-separated uppercase RRGGBB entries per line, compatible with the
+previous PlasmaTerm editor. **SAVE TXT** downloads that text.
+**IMPORT** accepts a complete 256-colour plain-text file; an invalid
+count or hex value leaves the palette unchanged. Regions can also be
+pasted directly from ordinary text.
+
+The palette generator retains the existing 0–100% **VARIATION** slider:
+0 leaves all colours unchanged, 25 blends a restrained variation, and
+100 fully replaces the LUT with a new, cyclic eight-anchor palette.
+Randomisation now shares the spatial editor's bounded undo stack.
+
+LUT keyboard shortcuts operate only when focus is in the editor:
+**S** Select, **B** Brush, **I** Pick, **Ctrl+A** select all,
+**Ctrl+C/X/V** copy/cut/paste, **Ctrl+Z** undo, **Ctrl+Shift+Z** or
+**Ctrl+Y** redo, **Delete** clear, and arrow keys to move the active cell.
+The editor's focus is isolated from the plasma Keybed shortcuts.
+
+### Developer checks
+
+From the root of the web-v0.1a line (or this feature branch):
+
+```powershell
+node --test test_plasma_lut_editor.mjs
+python -m unittest -v test_plasma_web.py
+```
+
+The Node tests exercise the pure spatial geometry, sparse region clipboard,
+Xenofield wire format, legacy full LUT text, gradients, transforms and seeded
+palette variation. The Python suite covers the existing web-to-worker
+protocol and structural browser contracts. Hardware browser rendering
+and Firefox/Chromium pointer interaction still require interactive checks.
 
 The entire workspace stays at `100vw × 100dvh` with no document scrolling.
 On narrow displays PlasmaTerm fills the viewport behind the floating windows;
