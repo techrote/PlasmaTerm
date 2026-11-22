@@ -201,9 +201,18 @@ class BrowserPresentationTests(unittest.TestCase):
         self.assertIn('export function varyPalette(colors, percentage',
                       self.lut_javascript)
         self.assertIn('const anchors = Array.from({ length: 8 }', self.lut_javascript)
-        self.assertIn("if (!onCommit(palette))", self.lut_javascript)
+        self.assertIn("const accepted = mode === 'ui'", self.lut_javascript)
+        self.assertIn('colourways.replacePalette(palette)', self.lut_javascript)
+        self.assertIn('onCommit(palette)', self.lut_javascript)
         self.assertIn("worker.postMessage({ type: 'setLut', colors });", self.javascript)
         self.assertIn('updateLutFields(data.state)', self.javascript)
+
+    def test_ui_colourway_editor_is_independent_of_runtime_lut(self):
+        for element_id in ('lut-target', 'lut-reset-skin', 'lut-colourway-info'):
+            self.assertIn(f'id="{element_id}"', self.html)
+        self.assertIn("import { createColourwayController }", self.javascript)
+        self.assertIn('colourways,', self.javascript)
+        self.assertIn("if (mode === 'plasma') pending.push", self.lut_javascript)
 
     def test_spatial_lut_editor_and_winamp_chrome_preserve_keyboard_isolation(self):
         for name in ('PLASMATERM', 'KEYBED', 'MODULATION', 'LUT EDITOR'):
