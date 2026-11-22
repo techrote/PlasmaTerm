@@ -459,6 +459,459 @@
       .lut-window { width: min(642px, calc(100vw - 8px)); height: calc(100dvh - 8px); }
     }
     @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; } }
+
+    /* Winamp Modern reference: smoked graphite, citrus LCD, thin metal bevels.
+       Styling intentionally avoids third-party skin image assets. */
+    :root {
+      --chrome: #252a20;
+      --line: #525d3d;
+      --muted: #b9c59b;
+      --accent: #b7ef30;
+      --accent-rgb: 183 239 48;
+      --hot: #e7f55c;
+      --danger: #ff8c79;
+      --energy-highlight: #b7ef30;
+      --energy-highlight-rgb: 183 239 48;
+      --energy-contrast: #121910;
+      --dock-colour: #304020;
+      --dock-foreground: #d4f681;
+    }
+    body {
+      color: #e2e9cc;
+      background: radial-gradient(ellipse at 47% 36%, #343a29, #1b1d18 55%, #090a08);
+      font-family: Tahoma, Verdana, ui-sans-serif, sans-serif;
+    }
+    .faux-window {
+      border: 1px solid #5c7041;
+      border-radius: 3px;
+      background: #191c17;
+      box-shadow: 0 10px 32px #000b, inset 1px 1px #7e9060,
+        inset -1px -1px #080b07, 0 0 0 1px #050604;
+    }
+    .faux-toolbar {
+      background: linear-gradient(180deg, #3e4736 0%, #2a3027 32%, #1b211b 100%);
+      border-bottom: 1px solid #667b38;
+      color: #d7e4b0;
+      font: bold 9px/1 Tahoma, Verdana, sans-serif;
+      text-shadow: 0 1px #050704;
+    }
+    .toolbar-drag-region {
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      background-image: repeating-linear-gradient(180deg,
+        transparent 0, transparent 6px, #7b98401f 6px, #7b98401f 7px);
+    }
+    .winamp-title {
+      flex: 0 0 auto;
+      padding: 2px 5px;
+      background: #293126;
+      border: 1px solid #455b32;
+      color: #bbec64;
+      font: bold 9px/1 Tahoma, Verdana, sans-serif;
+      letter-spacing: .12em;
+      white-space: nowrap;
+      text-shadow: 0 1px #10180e, 0 0 6px #9fdd453a;
+      pointer-events: none;
+    }
+    .traffic-button, .integrated-button, .jog-button {
+      border-color: #3c5030;
+      color: #d7e7ac;
+      background: linear-gradient(#414a34, #282f24 52%, #1b2119);
+      text-shadow: 0 1px #10150b;
+    }
+    .traffic-button { background: linear-gradient(#36412e, #222a22); }
+    .traffic-button::after {
+      width: 10px;
+      height: 7px;
+      border: 1px solid #71862f;
+      border-radius: 1px;
+      background: linear-gradient(#d5f46d, #7eae27);
+      box-shadow: inset 1px 1px #f1ffb4a0, 0 0 2px #b4ed4599;
+    }
+    .traffic-red::after { background: linear-gradient(#d9db98, #7c8a65); }
+    .traffic-green::after { background: linear-gradient(#d9f5a0, #76b33b); }
+    .integrated-button:hover, .integrated-button:focus-visible,
+    .jog-button:hover, .jog-button:focus-visible {
+      background: #b4e944;
+      color: #11170a;
+      text-shadow: none;
+    }
+    .integrated-button[aria-pressed="true"] { color: #10200a; background: #a9dc2f; }
+    .restore-button { border-color: #637f32; }
+    .title-control {
+      color: #cee6a3;
+      background: #293126;
+      border-color: #526739;
+    }
+    .title-number {
+      color: #ddff7b;
+      background: #0b150b;
+      border-color: #4a6032;
+      font: bold 10px/1 Consolas, ui-monospace, monospace;
+      text-shadow: 0 0 5px #b4ff634a;
+    }
+    .title-preset { background-color: #172118; border-color: #4b6039; }
+    .title-preset option { color: #ebffbc; background: #182017; }
+    .plasma-toolbar { border-radius: 2px 2px 0 0; }
+    .terminal-shell {
+      border-radius: 0 0 2px 2px;
+      box-shadow: inset 0 0 0 2px #475638, inset 0 0 0 3px #070b06;
+    }
+    #status {
+      border: 1px solid #4e6235;
+      border-radius: 1px;
+      background: #091009e6;
+      color: #cce77c;
+      font: 10px/1.4 Consolas, monospace;
+    }
+    .controls-body, .energy-body {
+      background: linear-gradient(155deg, #20271d, #0d130d) !important;
+      font-family: Tahoma, Verdana, sans-serif;
+    }
+    .keycap {
+      border-color: #526645;
+      background: linear-gradient(#3a4331, #1f2b20);
+      box-shadow: inset 1px 1px #70875a, inset -1px -1px #0a0d09;
+    }
+    .keycap strong { color: #c9e680; font: bold 9px/1 Tahoma, Verdana, sans-serif; }
+    .keycap small { color: #f0f6cb; font: bold 9px/1.05 Tahoma, Verdana, sans-serif; }
+    .keycap.is-active { background: #b5e941; }
+    .keycap.is-active small { color: #152109; }
+    .energy-power, .target-led { border-color: #425c33; }
+    .target-led[aria-pressed="true"] { color: #d0f369; border-color: #89b944; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 1px solid #dfff65;
+      outline-offset: -1px;
+    }
+
+    /* Editor window is arranged as a titlebar, command strip, 16×16 map
+       and independently scrolling operations rack. */
+    .lut-window {
+      z-index: 40;
+      width: min(940px, calc(100vw - 8px));
+      height: min(690px, calc(100dvh - 8px));
+      color: #ddedc4;
+      overflow: hidden;
+    }
+    .lut-toolbar { overflow: hidden; }
+    .lut-toolbar .toolbar-drag-region { min-width: 85px; }
+    .lut-primary-tools { display: flex; align-items: stretch; min-width: 0; }
+    .lut-primary-tools button, .lut-command-strip button,
+    .lut-toolbox button {
+      border: 1px solid #526941;
+      border-radius: 1px;
+      padding: 2px 7px;
+      color: #dfeeb9;
+      background: linear-gradient(#404c38, #263020);
+      box-shadow: inset 1px 1px #70865a, inset -1px -1px #101810;
+      font: bold 9px Tahoma, Verdana, sans-serif;
+      text-shadow: 0 1px #081008;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .lut-primary-tools button {
+      padding: 0 7px;
+      border-width: 0 0 0 1px;
+      box-shadow: inset 1px 0 #6c8452;
+    }
+    .lut-primary-tools button:hover, .lut-command-strip button:hover,
+    .lut-toolbox button:hover, .lut-primary-tools button.is-pressed {
+      color: #141e07;
+      background: linear-gradient(#edff78, #a3da29);
+      box-shadow: inset 1px 1px #f6ffbd, inset -1px -1px #567727;
+      text-shadow: none;
+    }
+    .lut-primary-tools button[disabled], .lut-command-strip button[disabled],
+    .lut-toolbox button[disabled] { opacity: .38; cursor: not-allowed; }
+    .lut-tool-separator {
+      align-self: center;
+      flex: 0 0 1px;
+      height: 15px;
+      margin: 0 5px;
+      background: #758a47;
+    }
+    .lut-command-strip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 30px;
+      padding: 3px 7px;
+      overflow: auto hidden;
+      background: linear-gradient(#303a29, #222920);
+      border-bottom: 1px solid #5e7441;
+      scrollbar-width: thin;
+    }
+    .lut-command-label {
+      color: #c4eb70;
+      font: bold 9px Tahoma, Verdana, sans-serif;
+      letter-spacing: .12em;
+      margin-right: 4px;
+    }
+    .lut-command-strip button { height: 22px; flex: 0 0 auto; }
+    .lut-main-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 250px;
+      gap: 0;
+      height: calc(100% - var(--toolbar-height) - 30px);
+      min-height: 0;
+      padding: 5px;
+      background: #161b14;
+    }
+    .lut-grid-pane {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 24px 20px minmax(0, 1fr) 32px;
+      background: #12180f;
+      border: 1px solid #556b3c;
+      box-shadow: inset 1px 1px #344a2c;
+    }
+    .lut-strip-heading, .lut-grid-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+      padding: 0 7px;
+      color: #c6ec67;
+      background: #30392c;
+      border-bottom: 1px solid #566f38;
+      font: bold 9px Tahoma, Verdana, sans-serif;
+      letter-spacing: .07em;
+    }
+    #lut-active-slot { color: #e7f29c; }
+    #lut-strip {
+      display: block;
+      width: 100%;
+      height: 20px;
+      border-bottom: 2px solid #576d38;
+      image-rendering: pixelated;
+      background: #050907;
+    }
+    .lut-grid-wrap {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      min-height: 0;
+      padding: 5px;
+      overflow: hidden;
+      background: radial-gradient(ellipse at 50% 50%, #273322, #080d07);
+    }
+    .lut-grid {
+      display: grid;
+      grid-template-columns: repeat(16, minmax(0, 1fr));
+      grid-template-rows: repeat(16, minmax(0, 1fr));
+      width: min(100%, calc(100dvh - 170px), 490px);
+      height: auto;
+      aspect-ratio: 1;
+      max-height: 100%;
+      padding: 2px;
+      gap: 1px;
+      border: 2px solid #738e48;
+      box-shadow: inset 0 0 0 1px #000, 0 0 0 1px #080c06;
+      background: #070b07;
+      cursor: crosshair;
+      touch-action: none;
+      outline: none;
+    }
+    .lut-cell {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      isolation: isolate;
+      overflow: hidden;
+    }
+    .lut-field {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      border: 1px solid #11200f;
+      border-radius: 0;
+      outline: 0;
+      font: bold clamp(5px, .58vw, 8px)/1 Consolas, ui-monospace, monospace;
+      text-align: center;
+      text-transform: uppercase;
+      cursor: inherit;
+      user-select: none;
+    }
+    .lut-field:not([readonly]) {
+      user-select: text;
+      cursor: text;
+      outline: 2px solid white;
+      outline-offset: -2px;
+    }
+    .lut-cell.is-selected::after {
+      content: '';
+      position: absolute;
+      z-index: 2;
+      inset: 0;
+      border: 2px solid #d6ff64;
+      box-shadow: inset 0 0 0 1px #0b170a, 0 0 0 1px #0b170a;
+      pointer-events: none;
+    }
+    .lut-cell.is-active::before {
+      content: '';
+      position: absolute;
+      z-index: 3;
+      inset: 4px;
+      border: 1px dashed #fff;
+      mix-blend-mode: difference;
+      pointer-events: none;
+    }
+    .lut-grid-footer {
+      justify-content: flex-start;
+      border-top: 1px solid #53663b;
+      border-bottom: none;
+      background: #293426;
+    }
+    #lut-selection-status {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font: bold 9px Consolas, monospace;
+      color: #d8ee9e;
+    }
+    #lut-selection-status[data-error="true"] { color: #ffae85; }
+    .lut-ops-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-height: 0;
+      min-width: 0;
+      margin-left: 5px;
+      padding-right: 3px;
+      overflow: hidden auto;
+      scrollbar-width: thin;
+      scrollbar-color: #718b44 #161b14;
+    }
+    .lut-toolbox {
+      display: grid;
+      gap: 6px;
+      flex: 0 0 auto;
+      padding: 7px;
+      border: 1px solid #536b3b;
+      background: linear-gradient(140deg, #2d3428, #192219);
+      box-shadow: inset 1px 1px #566b46, inset -1px -1px #101810;
+    }
+    .lut-toolbox h3 {
+      margin: 0 0 1px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #607942;
+      color: #c5f164;
+      letter-spacing: .12em;
+      font: bold 10px Tahoma, Verdana, sans-serif;
+    }
+    .lut-toolbox label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 5px;
+      color: #d8e5be;
+      font: bold 9px Tahoma, Verdana, sans-serif;
+    }
+    .lut-toolbox select, .lut-toolbox input[type=number],
+    .lut-color-row > input[type=text] {
+      height: 23px;
+      min-width: 0;
+      padding: 2px 5px;
+      border: 1px solid #5e7a3b;
+      border-radius: 0;
+      outline: none;
+      color: #e4ffae;
+      background: #10190e;
+      font: bold 10px Consolas, monospace;
+    }
+    .lut-toolbox select { width: 108px; font-size: 9px; }
+    .lut-toolbox input[type=number] { width: 54px; text-align: center; }
+    .lut-color-row {
+      display: grid;
+      grid-template-columns: 22px 56px minmax(0, 1fr);
+      gap: 5px;
+      align-items: center;
+    }
+    .lut-color-row > input { width: 100%; text-align: center; }
+    .lut-swatch {
+      width: 22px;
+      height: 22px;
+      border: 1px solid #aac36b;
+      box-shadow: 0 0 0 1px #0a1009;
+    }
+    .lut-color-row label {
+      display: flex;
+      justify-content: space-around;
+    }
+    .lut-color-row input[type=color] {
+      width: 31px;
+      height: 23px;
+      padding: 1px;
+      border: 1px solid #6b8844;
+      background: #0e190d;
+      cursor: pointer;
+    }
+    .lut-button-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+    }
+    .lut-button-grid button { min-height: 25px; padding-inline: 3px; }
+    .lut-scale-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .lut-scale-row input[type=range] { flex: 1 1 auto; min-width: 0; accent-color: #baee48; }
+    .lut-scale-label span { color: #9dbb69; }
+    .lut-help {
+      flex: 0 0 auto;
+      margin: 0;
+      padding: 6px;
+      color: #a9c17f;
+      border: 1px solid #3e5031;
+      background: #0d140b;
+      font: 8px/1.55 Tahoma, Verdana, sans-serif;
+    }
+    @media (max-width: 720px) {
+      .lut-window {
+        width: calc(100vw - 8px);
+        height: calc(100dvh - 8px);
+      }
+      .lut-toolbar .toolbar-drag-region { min-width: 45px; padding-inline: 2px; }
+      .lut-primary-tools button { padding-inline: 4px; font-size: 8px; }
+      .lut-tool-separator { margin-inline: 2px; }
+      .lut-main-body {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 63%) minmax(0, 37%);
+      }
+      .lut-grid {
+        grid-template-columns: repeat(16, minmax(0, 1fr));
+        grid-template-rows: repeat(16, minmax(0, 1fr));
+        width: min(100%, calc(100dvh - 265px), 400px);
+      }
+      .lut-ops-pane {
+        display: grid;
+        align-content: start;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 5px 0 0;
+        padding: 0;
+        overflow: auto;
+      }
+      .lut-help { grid-column: 1/-1; }
+    }
+    @media (max-width: 470px) {
+      .winamp-title { letter-spacing: 0; font-size: 8px; }
+      .lut-ops-pane { grid-template-columns: 1fr; }
+      .lut-primary-tools button { font-size: 7px; padding-inline: 3px; }
+      .lut-toolbar .toolbar-drag-region { min-width: 38px; }
+      .lut-grid { width: min(100%, calc(100dvh - 265px), 325px); }
+      .lut-command-strip { padding-inline: 4px; }
+    }
+
   </style>
 </head>
 <body>
