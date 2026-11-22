@@ -34,3 +34,38 @@ jobs:
         run: python -m unittest -v test_plasma_web.py
       - name: Native config generator regression tests
         run: python -m unittest -v test_plasma_config_gen.py
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright test driver
+        run: npm install --no-save playwright@1.56.1
+      - name: Provision browser
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            echo "BROWSER_CHANNEL=chrome" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+            echo "BROWSER_CHANNEL=chromium" >> "$GITHUB_ENV"
+          fi
+      - name: Run browser live smoke
+        run: |
+          python -m http.server 8000 --bind 127.0.0.1 &
+          sleep 2
+          node test_plasma_browser.mjs
+      - name: Upload Winamp desktop and mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasmaterm-winamp-modern-previews
+          path: artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 7
