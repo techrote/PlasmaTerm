@@ -28,7 +28,7 @@ class BrowserPresentationTests(unittest.TestCase):
             cls.lut_javascript = handle.read()
 
     def test_working_page_version_is_incremented(self):
-        self.assertIn('PlasmaTerm web-v0.2b', self.html)
+        self.assertIn('PlasmaTerm web-v0.3a', self.html)
         self.assertIn("plasmaterm.web-v0.2b.config", self.javascript)
         self.assertIn("plasmaterm.web-v0.101a.config", self.javascript)
 
