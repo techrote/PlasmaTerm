@@ -31,8 +31,16 @@ function cssTokens(source) {
 
 export function buildColourwayCatalog(source) {
   const entries = [], byOriginal = new Map();
+  // Put currently visible Winamp skin colours first. Earlier CSS contains
+  // legacy defaults that are overridden by these rules and can be difficult
+  // to identify visually. Keep all references: nothing gets discarded.
   const tokens = cssTokens(source);
-  for (const match of tokens) {
+  const winampStart = source.indexOf('/* Winamp Modern reference');
+  const ordered = winampStart < 0 ? tokens : [
+    ...tokens.filter((match) => match.index >= winampStart),
+    ...tokens.filter((match) => match.index < winampStart),
+  ];
+  for (const match of ordered) {
     const parsed = cssHexParts(match[0]);
     if (!parsed) continue;
     let index = byOriginal.get(parsed.colour);
