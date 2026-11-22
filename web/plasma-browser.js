@@ -158,6 +158,15 @@ function sendLutColors(colors) {
 const lutEditor = installLutEditor({
   root: lutWindow,
   onCommit: sendLutColors,
+  onSelectSlot: (slot) => {
+    // Use the canonical Ctrl+digit worker route so bank switching updates
+    // active palette, metrics and persisted config identically to a keypress.
+    if (!/^[0-9]$/.test(slot) || !runtimeReady) return false;
+    setKeyboardOwnership(true);
+    if (!sendKeyDown(slot, { ctrl: true }, 'lut-bank-selector')) return false;
+    sendKeyUp(slot, { ctrl: true }, 'lut-bank-selector');
+    return true;
+  },
   onError: (message) => {
     statusElement.hidden = false;
     statusElement.classList.add('error');
