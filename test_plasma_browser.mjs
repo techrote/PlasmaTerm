@@ -74,6 +74,10 @@ try {
   const rendererRevision = await page.locator('#terminal').getAttribute('data-lut-revision');
   await page.locator('#lut-target').selectOption('ui');
   assert.equal(await page.locator('#lut-window').getAttribute('data-lut-mode'), 'ui');
+  await page.locator('#lut-colourway-search').fill('.lut');
+  assert.ok(await page.locator('#lut-grid .lut-cell.is-ui-filtered').count() > 0);
+  await page.locator('#lut-colourway-search').fill('');
+  assert.equal(await page.locator('#lut-grid .lut-cell.is-ui-filtered').count(), 0);
   const originalUi = await page.locator('#lut-grid .lut-field').first().inputValue();
   await page.locator('#lut-select').click();
   await page.locator('#lut-none').click();
