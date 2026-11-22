@@ -217,7 +217,7 @@ export function installLutEditor({ root, onCommit, onError }) {
   const cells = [], inputs = [], historyBySlot = new Map();
   let state = { colors: Array(LUT_LENGTH).fill('000000'), slot: 'none', revision: 0 };
   let ready = false, hasState = false, selected = new Set(), active = 0;
-  let tool = 'select', drag = null, stroke = null, clipboard = null, expected = null;
+  let tool = 'select', drag = null, stroke = null, clipboard = null, pending = [];
   let strokeSeed = 0, note = '';
   const colors = { a: 'ED57AE', b: '32A68F' };
   const writeButtons = [...root.querySelectorAll('[data-lut-write]')];
@@ -292,18 +292,38 @@ export function installLutEditor({ root, onCommit, onError }) {
     if (!validPalette(incoming?.colors)) return;
     const next = { colors: incoming.colors.map(normalizeHex),
       slot: String(incoming.slot ?? 'none'), revision: Number(incoming.revision) || 0 };
-    const matched = expected && expected.colors.every((value, i) => value === next.colors[i]);
-    if (expected && state.slot === 'none' && next.slot === '0' && matched) {
-      const pendingHistory = historyBySlot.get('none');
-      if (pendingHistory) historyBySlot.set('0', pendingHistory);
-      historyBySlot.delete('none');
+    // Worker LUT writes are sequential, but a brush stroke or double-click can
+    // arrive before earlier write acknowledgements. Never roll the preview
+    // back or erase undo history for a stale intermediate acknowledgement.
+    const ackIndex = pending.findIndex((entry) =>
+      entry.colors.every((value, index) => value === next.colors[index]));
+    if (ackIndex >= 0) {
+      const [ack] = pending.splice(ackIndex, 1);
+      // Remove only entries preceding this acknowledged write, preserving
+      // subsequent local operations that are still in flight.
+      if (ackIndex) pending.splice(0, ackIndex);
+      if (state.slot === 'none' && next.slot === '0') {
+        const proceduralHistory = historyBySlot.get('none');
+        if (proceduralHistory) historyBySlot.set('0', proceduralHistory);
+        historyBySlot.delete('none');
+      }
+      if (pending.length) {
+        state.slot = next.slot;
+        state.revision = next.revision;
+        root.dataset.lutSlot = state.slot;
+        root.dataset.lutRevision = String(state.revision);
+        updateStatus();
+        return;
+      }
+    } else {
+      // External preset/LUT change: abandon in-flight local history rather
+      // than applying an invalid undo to a different palette.
+      pending = [];
+      if (hasState && next.slot === state.slot &&
+          !next.colors.every((value, index) => value === state.colors[index])) {
+        historyBySlot.delete(next.slot);
+      }
     }
-    if (!matched && hasState && next.slot === state.slot &&
-        !next.colors.every((value, i) => value === state.colors[i])) {
-      // An external config/preset edit invalidates history for this bank.
-      historyBySlot.delete(next.slot);
-    }
-    if (matched || next.slot !== state.slot) expected = null;
     state = next;
     hasState = true;
     root.dataset.lutSlot = state.slot;
@@ -322,7 +342,7 @@ export function installLutEditor({ root, onCommit, onError }) {
     stack.undo.push({ before, after: [...palette], label });
     if (stack.undo.length > 64) stack.undo.shift();
     stack.redo = [];
-    expected = { slot: state.slot, colors: [...palette] };
+    pending.push({ slot: state.slot, colors: [...palette] });
     state.colors = palette;
     paintAll();
     report(label);
@@ -336,7 +356,7 @@ export function installLutEditor({ root, onCommit, onError }) {
     const palette = direction === 'undo' ? record.before : record.after;
     if (!onCommit(palette)) { from.push(record); return report('WORKER REJECTED LUT WRITE', true); }
     to.push(record);
-    expected = { slot: state.slot, colors: [...palette] };
+    pending.push({ slot: state.slot, colors: [...palette] });
     state.colors = [...palette];
     paintAll();
     report(direction.toUpperCase() + ' ' + record.label);
