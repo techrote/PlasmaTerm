@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - web-v0.1a
+      - feat/web-lut-spatial-winamp-modern
 
 permissions:
   contents: read
