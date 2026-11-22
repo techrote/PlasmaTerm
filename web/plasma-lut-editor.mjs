@@ -211,7 +211,7 @@ function brushOffsets(shape, size, seed, index) {
   return offsets;
 }
 
-export function installLutEditor({ root, onCommit, onError }) {
+export function installLutEditor({ root, onCommit, onError, onSelectSlot }) {
   const $ = (id) => root.querySelector('#' + id);
   const grid = $('lut-grid'), strip = $('lut-strip'), status = $('lut-selection-status');
   const cells = [], inputs = [], historyBySlot = new Map();
@@ -220,6 +220,14 @@ export function installLutEditor({ root, onCommit, onError }) {
   let tool = 'select', drag = null, stroke = null, clipboard = null, pending = [];
   let strokeSeed = 0, note = '';
   const colors = { a: 'ED57AE', b: '32A68F' };
+  $('lut-bank').addEventListener('change', (event) => {
+    const slot = event.target.value;
+    if (!ready || !hasState || slot === state.slot) return;
+    if (!/^[0-9]$/.test(slot) || !onSelectSlot?.(slot)) {
+      $('lut-bank').value = state.slot;
+      report('LUT BANK SWITCH IS UNAVAILABLE', true);
+    }
+  });
   const writeButtons = [...root.querySelectorAll('[data-lut-write]')];
   const toolButtons = { select: $('lut-select'), brush: $('lut-brush'), pick: $('lut-pick') };
 
@@ -285,6 +293,7 @@ export function installLutEditor({ root, onCommit, onError }) {
     ready = Boolean(value);
     const enabled = ready && hasState;
     for (const button of writeButtons) button.disabled = !enabled;
+    $('lut-bank').disabled = !enabled;
     grid.setAttribute('aria-disabled', String(!enabled));
     updateStatus();
   }
@@ -312,6 +321,7 @@ export function installLutEditor({ root, onCommit, onError }) {
         state.revision = next.revision;
         root.dataset.lutSlot = state.slot;
         root.dataset.lutRevision = String(state.revision);
+        $('lut-bank').value = state.slot;
         updateStatus();
         return;
       }
@@ -328,6 +338,7 @@ export function installLutEditor({ root, onCommit, onError }) {
     hasState = true;
     root.dataset.lutSlot = state.slot;
     root.dataset.lutRevision = String(state.revision);
+    $('lut-bank').value = state.slot;
     setReady(ready);
     paintAll();
   }
