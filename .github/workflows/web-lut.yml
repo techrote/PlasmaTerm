@@ -1,9 +1,6 @@
 name: PlasmaTerm Web LUT and Presentation
 
 on:
-  push:
-    branches:
-      - feat/web-lut-spatial-winamp-modern
   pull_request:
     branches:
       - web-v0.1a
