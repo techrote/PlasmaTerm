@@ -122,6 +122,8 @@ setLut worker path handles materialisation, rendering, active slot and
 local configuration persistence. Editing while on a procedural palette
 still materialises the result in stored LUT slot 0. The existing ten
 palette banks, preset shortcuts and palette cycling remain unchanged.
+The **BANK** dropdown directly selects stored LUTs 00–09 through the existing
+Ctrl+digit worker route; PROCEDURAL is shown when no bank has been activated.
 
 ### Selection and painting
 
@@ -186,7 +188,9 @@ The Node tests exercise the pure spatial geometry, sparse region clipboard,
 Xenofield wire format, legacy full LUT text, gradients, transforms and seeded
 palette variation. The Python suite covers the existing web-to-worker
 protocol and structural browser contracts. Hardware browser rendering
-and Firefox/Chromium pointer interaction still require interactive checks.
+and physical Firefox pointer interaction still require owner testing.
+CI also exercises a live Chromium/Pyodide smoke test and captures desktop/mobile
+Winamp-style screenshots as downloadable workflow artifacts.
 
 The entire workspace stays at `100vw × 100dvh` with no document scrolling.
 On narrow displays PlasmaTerm fills the viewport behind the floating windows;
