@@ -863,6 +863,15 @@
       opacity: .52;
       box-shadow: inset 0 0 0 2px #52633a;
     }
+    .lut-window[data-lut-mode="ui"] .lut-cell.is-ui-filtered { opacity: .16; }
+    #lut-colourway-search-label { display: flex; flex-direction: column; align-items: stretch; gap: 5px; }
+    #lut-colourway-search {
+      width: 100%; height: 24px; padding: 3px 6px;
+      border: 1px solid #698541; border-radius: 1px;
+      background: #10190e; color: #e7ffae;
+      font: bold 10px Consolas, monospace;
+    }
+    #lut-colourway-search-label[hidden] { display: none !important; }
     #lut-colourway-info {
       padding: 3px; color: #d0ed8b;
       font: bold 9px Tahoma, Verdana, sans-serif;
@@ -1088,6 +1097,9 @@
         <aside class="lut-ops-pane" aria-label="LUT painting and generation controls">
           <section class="lut-toolbox">
             <h3>COLOUR DECK</h3>
+            <label id="lut-colourway-search-label" hidden>FIND UI SELECTOR / HEX
+              <input id="lut-colourway-search" type="search" placeholder="e.g. .lut / window / #5C7041" aria-label="Find UI swatches by CSS selector, original hex or index">
+            </label>
             <div class="lut-color-row">
               <span id="lut-swatch-a" class="lut-swatch" aria-hidden="true"></span>
               <label>A <input id="lut-color-a" type="color" value="#ED57AE" aria-label="Primary brush colour A"></label>
