@@ -89,6 +89,23 @@ try {
   await page.locator('#lut-redo').click();
   assert.equal(await page.locator('#lut-grid .lut-field').first().inputValue(), 'C0FFEE');
 
+  // A fast pointer jump must still paint every intermediate cell; one undo
+  // restores the whole stroke rather than just the final stamp.
+  await page.locator('#lut-brush').click();
+  await page.locator('#lut-brush-shape').selectOption('pixel');
+  await page.locator('#lut-brush-size').fill('1');
+  const middleBefore = await page.locator('#lut-grid .lut-field').nth(35).inputValue();
+  const startBox = await page.locator('#lut-grid .lut-cell').nth(32).boundingBox();
+  const endBox = await page.locator('#lut-grid .lut-cell').nth(38).boundingBox();
+  assert.ok(startBox && endBox);
+  await page.mouse.move(startBox.x + startBox.width / 2, startBox.y + startBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(endBox.x + endBox.width / 2, endBox.y + endBox.height / 2, { steps: 1 });
+  await page.mouse.up();
+  assert.equal(await page.locator('#lut-grid .lut-field').nth(35).inputValue(), 'C0FFEE');
+  await page.locator('#lut-undo').click();
+  assert.equal(await page.locator('#lut-grid .lut-field').nth(35).inputValue(), middleBefore);
+
   // Switching UI banks must not touch the plasma LUT bank or its revision.
   await page.locator('#lut-bank').selectOption('1');
   assert.equal(await page.locator('#lut-grid .lut-field').first().inputValue(), originalUi);
