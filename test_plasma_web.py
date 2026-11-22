@@ -24,6 +24,8 @@ class BrowserPresentationTests(unittest.TestCase):
             cls.javascript = handle.read()
         with open(os.path.join(HERE, 'web', 'plasma-worker.js'), encoding='utf-8') as handle:
             cls.worker_javascript = handle.read()
+        with open(os.path.join(HERE, 'web', 'plasma-lut-editor.mjs'), encoding='utf-8') as handle:
+            cls.lut_javascript = handle.read()
 
     def test_working_page_version_is_incremented(self):
         self.assertIn('PlasmaTerm web-v0.2b', self.html)
@@ -178,14 +180,17 @@ class BrowserPresentationTests(unittest.TestCase):
         for element_id in ('global-reset', 'visual-mode', 'dock-controls',
                            'dock-energy', 'dock-lut', 'restore-controls',
                            'restore-energy', 'restore-lut', 'reset-keybed',
-                           'reset-energy', 'export-lut'):
+                           'reset-energy', 'export-lut', 'lut-strip',
+                           'lut-select', 'lut-brush', 'lut-pick', 'lut-undo',
+                           'lut-redo', 'lut-copy', 'lut-paste', 'lut-gradient'):
             self.assertIn(f'id="{element_id}"', self.html)
-        self.assertNotIn('class="window-title"', self.html)
         self.assertIn('grid-template-columns: repeat(16', self.html)
-        self.assertIn('grid-template-columns: repeat(8', self.html)
-        self.assertIn('for (let index = 0; index < 256;', self.javascript)
+        self.assertIn("import { installLutEditor } from './plasma-lut-editor.mjs';",
+                      self.javascript)
+        self.assertIn('for (let i = 0; i < LUT_LENGTH; i += 1)', self.lut_javascript)
         self.assertIn("type: 'setLut'", self.javascript)
-        self.assertIn("rows.push(lutState.colors.slice(index, index + 8).join(', '))", self.javascript)
+        self.assertIn('function exportText()', self.lut_javascript)
+        self.assertIn('XENOFIELD_LUT_REGION_V1', self.lut_javascript)
 
     def test_lut_randomise_scale_uses_atomic_current_palette_updates(self):
         self.assertIn('id="randomise-lut"', self.html)
@@ -193,13 +198,26 @@ class BrowserPresentationTests(unittest.TestCase):
                       self.html)
         self.assertIn('id="lut-random-scale-slider" type="range" min="0" max="100"',
                       self.html)
-        self.assertIn('function randomiseLutColors(colors, scalePercent, random = Math.random)',
-                      self.javascript)
-        self.assertIn('const anchorCount = 8', self.javascript)
-        self.assertIn('const colors = randomiseLutColors(lutState.colors, lutRandomScale)',
-                      self.javascript)
-        self.assertIn('if (!sendLutColors(colors)) return', self.javascript)
-        self.assertIn('updateLutFields({ ...lutState, colors }, false)', self.javascript)
+        self.assertIn('export function varyPalette(colors, percentage',
+                      self.lut_javascript)
+        self.assertIn('const anchors = Array.from({ length: 8 }', self.lut_javascript)
+        self.assertIn("if (!onCommit(palette))", self.lut_javascript)
+        self.assertIn("worker.postMessage({ type: 'setLut', colors });", self.javascript)
+        self.assertIn('updateLutFields(data.state)', self.javascript)
+
+    def test_spatial_lut_editor_and_winamp_chrome_preserve_keyboard_isolation(self):
+        for name in ('PLASMATERM', 'KEYBED', 'MODULATION', 'LUT EDITOR'):
+            self.assertIn(f'class="winamp-title">{name}</span>', self.html)
+        self.assertIn('XENOFIELD_LUT_REGION_V1', self.lut_javascript)
+        self.assertIn('function makeRegion(', self.lut_javascript)
+        self.assertIn('function pasteRegion(', self.lut_javascript)
+        self.assertIn('function gradientPalette(', self.lut_javascript)
+        self.assertIn('function transformPalette(', self.lut_javascript)
+        self.assertIn('function installLutEditor(', self.lut_javascript)
+        self.assertIn('lutWindow.contains(event.target)', self.javascript)
+        self.assertIn('grid-template-rows: repeat(16', self.html)
+        self.assertIn('.lut-ops-pane {', self.html)
+        self.assertIn('height: calc(100% - var(--toolbar-height) - 30px)', self.html)
 
     def test_keybed_latches_and_resets_are_wired(self):
         self.assertIn('id="key-latch-plus"', self.html)
