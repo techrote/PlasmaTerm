@@ -25,8 +25,15 @@ async function dragBetween(a, b) {
 }
 try {
   await page.goto('http://127.0.0.1:8000/web/', { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.locator('#restore-lut').click();
-  await page.waitForSelector('#lut-grid[aria-disabled="false"]', { timeout: 90000 });
+  // Startup completes an asynchronous layout reset: opening LUT too early
+  // can be overwritten even though the worker later becomes ready.
+  await page.waitForFunction(() =>
+    document.querySelector('#lut-grid')?.getAttribute('aria-disabled') === 'false',
+  null, { timeout: 90000 });
+  if (await page.locator('#lut-window').isHidden()) {
+    await page.locator('#restore-lut').click();
+  }
+  await page.locator('#lut-grid').waitFor({ state: 'visible', timeout: 15000 });
   assert.equal(await page.locator('#lut-grid .lut-cell').count(), 256);
   await page.locator('#lut-all').click();
   await verifySelection(256, 'Select all');
