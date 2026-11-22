@@ -27,9 +27,8 @@ function harness(source = css, stored = null, search = '') {
 
 test('CSS swatches map distinct RGB while sharing repeats and preserving alpha', () => {
   const c = buildColourwayCatalog(css);
-  assert.equal(c.count, 4);
-  assert.deepEqual(c.defaultPalette.slice(0, 4),
-    ['AABBCC', '112233', '123456', '112233'].filter((v, i, arr) => arr.indexOf(v) === i));
+  assert.equal(c.count, 3);
+  assert.deepEqual(c.defaultPalette.slice(0, 3), ['AABBCC', '112233', '123456']);
   assert.equal(c.defaultPalette.length, COLOURWAY_SIZE);
   assert.deepEqual(c.entries.find((e) => e.original === 'AABBCC').alphas, [136]);
   const rewritten = rewriteColourwayCss(css, c);
