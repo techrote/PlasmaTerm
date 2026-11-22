@@ -229,8 +229,17 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot, colour
 
   function decorateGrid() {
     const entries = colourways?.catalog.entries || [];
+    const filter = $('lut-colourway-search').value.trim().toLowerCase().replace(/^#/, '');
+    let matches = 0;
     for (let i = 0; i < inputs.length; i += 1) {
       const item = mode === 'ui' ? entries[i] : null;
+      const matchesFilter = Boolean(item) && (!filter ||
+        item.original.toLowerCase().includes(filter) ||
+        item.selector.toLowerCase().includes(filter) ||
+        String(i).includes(filter));
+      if (matchesFilter) matches += 1;
+      cells[i].classList.toggle('is-ui-filtered', mode === 'ui' &&
+        Boolean(filter) && !matchesFilter);
       const description = item
         ? 'UI colour ' + i + ' · #' + item.original + ' · ' + item.selector
         : mode === 'ui' ? 'Reserved colourway swatch ' + i
@@ -240,10 +249,13 @@ export function installLutEditor({ root, onCommit, onError, onSelectSlot, colour
       cells[i].classList.toggle('is-ui-reserved', mode === 'ui' && !item);
     }
     $('lut-reset-skin').hidden = mode !== 'ui';
+    $('lut-colourway-search-label').hidden = mode !== 'ui';
     $('lut-colourway-info').hidden = mode !== 'ui';
     $('lut-colourway-info').textContent = entries.length +
-      ' BOUND COLOURS · ' + (LUT_LENGTH - entries.length) + ' RESERVED';
+      ' BOUND COLOURS · ' + (LUT_LENGTH - entries.length) +
+      ' RESERVED' + (filter ? ' · ' + matches + ' MATCHING' : '');
   }
+  $('lut-colourway-search').addEventListener('input', decorateGrid);
   function activateTarget(next) {
     if (next !== 'plasma' && next !== 'ui') return;
     if (mode === next) return;
